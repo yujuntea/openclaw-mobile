@@ -1,0 +1,46 @@
+# OpenClaw Mobile
+
+# 配置文件（包含敏感信息）
+config.js
+server_config.py
+.env
+*.local
+
+# 日志文件
+*.log
+logs/
+
+# 敏感文件
+secrets/
+*.pem
+*.key
+*.token
+
+# 依赖
+node_modules/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+*.tmp
+*.bak
+*.backup
+
+# 打包文件
+*.zip
+*.tar.gz
+
+# 测试覆盖率
+coverage/
+
+# 构建输出
+dist/
+build/

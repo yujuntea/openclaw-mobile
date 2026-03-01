@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>小强 AI</title>
+  <style>
+    :root { --bg: #000; --bg2: #1c1c1e; --bg3: #2c2c2e; --bg4: #3a3a3c; --text: #fff; --text2: #8e8e93; --accent: #0a84ff; --green: #30d158; --orange: #ff9f0a; --red: #ff453a; --purple: #bf5af2; --safe-top: 47px; --input-height: 60px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html,body { height: 100%; overflow: hidden; }
+    body { font-family: -apple-system, SF Pro Text, sans-serif; background: var(--bg); color: var(--text); }
+    
+    .header { height: var(--safe-top); background: rgba(28,28,30,.95); backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: .5px solid rgba(255,255,255,.1); position: relative; }
+    .header-left { font-size: 11px; color: var(--text2); max-width: 35%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+    .header-center { font-size: 15px; font-weight: 600; text-align: center; flex: 1; margin: 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .header-btn { width: 32px; height: 32px; border-radius: 50%; background: transparent; border: none; color: var(--text2); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .header-btn:active { transform: scale(0.9); background: var(--bg3); }
+    .header-btn.loading { animation: spin 1s linear infinite; }
+    .header-btn.active { background: var(--accent); color: #fff; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .header span { font-size: 17px; font-weight: 600; }
+    
+    /* 导航面板 */
+    .nav-panel { position: fixed; top: var(--safe-top); left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; }
+    .nav-panel.active { display: block; }
+    .nav-content { position: absolute; top: 0; right: 0; width: 280px; max-width: 80%; height: 100%; background: var(--bg2); padding: 20px; overflow-y: auto; animation: slideIn 0.3s ease-out; }
+    @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    .nav-title { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .nav-section { margin-bottom: 24px; }
+    .nav-section-title { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: var(--text); text-decoration: none; transition: all 0.2s; margin-bottom: 4px; }
+    .nav-link:hover, .nav-link:active { background: var(--bg3); }
+    .nav-link .icon { font-size: 20px; }
+    .nav-link .text { font-size: 15px; }
+    .nav-link .desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    
+    /* 语言切换按钮 */
+    .lang-btn { 
+      width: 36px; 
+      height: 36px; 
+      border-radius: 50%; 
+      background: var(--bg3); 
+      border: none; 
+      color: var(--accent); 
+      font-size: 12px; 
+      font-weight: 700; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      transition: all 0.2s;
+    }
+    .lang-btn:active { transform: scale(0.9); background: var(--bg4); }
+    
+    .chat { position: absolute; top: var(--safe-top); bottom: var(--input-height); left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 16px; -webkit-overflow-scrolling: touch; }
+    
+    .msg { display: flex; gap: 8px; margin-bottom: 16px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
+    @keyframes in { from { opacity: 0; transform: translateY(8px); } }
+    .msg.user { margin-left: auto; flex-direction: row-reverse; }
+    .msg.ai { flex-direction: row; }
+    
+    .av { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; background: linear-gradient(135deg, #5856d6, #af52de); }
+    .msg.user .av { background: var(--accent); }
+    
+    .msg-content { flex: 1; min-width: 0; }
+    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
+    .msg.ai .bubble { background: var(--bg3); border-top-left-radius: 6px; }
+    .msg.user .bubble { background: var(--accent); border-top-right-radius: 6px; }
+    
+    .time { font-size: 10px; color: var(--text2); margin-top: 4px; opacity: .7; }
+    .msg.user .time { text-align: right; }
+    
+    /* 思考过程 - 增强显示效果 */
+    .thinking { background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 12px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--purple); box-shadow: 0 2px 8px rgba(191,90,242,0.2); }
+    .thinking-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .thinking-icon { font-size: 16px; animation: pulse 1.5s infinite; }
+    .thinking-title { font-size: 13px; color: var(--purple); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .thinking-dots { display: flex; gap: 4px; margin-left: auto; }
+    .thinking-dots span { width: 6px; height: 6px; background: var(--purple); border-radius: 50%; animation: td 1.4s infinite; }
+    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes td { 0%,60%,100%{opacity:.3;transform:scale(0.8)} 30%{opacity:1;transform:scale(1)} }
+    .thinking-content { font-size: 13px; color: #a0a0b0; line-height: 1.6; font-family: 'SF Mono', Monaco, monospace; max-height: 200px; overflow-y: auto; }
+    
+    /* 思考过程 - 紧凑模式（流式输出时） */
+    .thinking.streaming { padding: 10px; animation: thinkingPulse 2s infinite; }
+    @keyframes thinkingPulse { 0%,100%{box-shadow: 0 2px 8px rgba(191,90,242,0.1)} 50%{box-shadow: 0 2px 12px rgba(191,90,242,0.3)} }
+    
+    /* 工具执行 - 增强显示效果 */
+    .tool-call { background: linear-gradient(135deg, #1a1a1a, #252525); border-radius: 12px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--orange); box-shadow: 0 2px 8px rgba(255,159,10,0.15); }
+    .tool-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .tool-icon { font-size: 16px; }
+    .tool-name { font-size: 13px; color: var(--orange); font-weight: 600; }
+    .tool-status { margin-left: auto; font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+    .tool-status.running { background: var(--orange); color: #000; animation: toolPulse 1s infinite; }
+    .tool-status.done { background: var(--green); color: #000; }
+    .tool-status.error { background: var(--red); color: #fff; }
+    @keyframes toolPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+    .tool-content { font-size: 12px; color: #909090; font-family: 'SF Mono', Monaco, 'Courier New', monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-top: 8px; }
+    
+    /* 工作状态指示器 */
+    .work-indicator { position: fixed; top: calc(var(--safe-top) + 8px); right: 12px; background: var(--purple); color: #fff; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; display: none; align-items: center; gap: 6px; z-index: 1000; box-shadow: 0 2px 10px rgba(191,90,242,0.4); animation: workIndicator 1.5s infinite; }
+    .work-indicator.active { display: flex; }
+    @keyframes workIndicator { 0%,100%{transform: scale(1)} 50%{transform: scale(1.05)} }
+    .work-indicator::before { content: '⚡'; }
+    
+    /* 流式输出 */
+    .streaming { border-left-color: var(--accent); }
+    .streaming .thinking-icon { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    
+    .input-wrap { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.95); padding: 8px 12px; padding-bottom: calc(8px + env(safe-area-inset-bottom,0)); border-top: .5px solid rgba(255,255,255,.1); display: flex; gap: 8px; align-items: center; z-index: 100; flex-wrap: wrap; }
+    .input { flex: 1; background: var(--bg3); border-radius: 20px; padding: 10px 16px; font-size: 16px; color: var(--text); border: none; outline: none; -webkit-appearance: none; min-width: 60%; }
+    .send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .send:active { transform: scale(.92); }
+    .send:disabled { background: var(--bg3); }
+    
+    /* 图片按钮 */
+    .img-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); border: none; color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .img-btn:active { transform: scale(.92); }
+    #imgInput { display: none; }
+    
+    /* 图片预览 - 支持多图 */
+    .img-preview { display: none; width: 100%; padding: 8px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .img-preview.has-img { display: flex; align-items: center; gap: 8px; }
+    .img-preview .img-list { display: flex; gap: 8px; flex-shrink: 0; }
+    .img-preview .img-item { position: relative; flex-shrink: 0; }
+    .img-preview img { max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid var(--bg4); }
+    .img-preview .img-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); border: none; color: #fff; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+    .img-preview .img-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
+    
+    .login { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; z-index: 200; }
+    .login-emoji { font-size: 64px; margin-bottom: 16px; }
+    .login-title { font-size: 28px; font-weight: 700; }
+    .login-sub { color: var(--text2); font-size: 15px; margin-bottom: 32px; }
+    .login-input { width: 100%; max-width: 280px; background: var(--bg3); border: none; border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 15px; margin-bottom: 12px; outline: none; -webkit-appearance: none; }
+    .login-btn { width: 100%; max-width: 280px; background: var(--accent); border: none; border-radius: 12px; padding: 14px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .login-err { color: var(--red); font-size: 13px; margin-top: 12px; display: none; text-align: center; }
+    .hidden { display: none !important; }
+    
+    /* 回复中的思考/工具 */
+    .reply-tools { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="login" id="login">
+    <div class="login-emoji">🤖</div>
+    <div class="login-title" data-i18n="appName">小强 AI</div>
+    <div class="login-sub" data-i18n="appDesc">AI 家庭助手</div>
+    <input type="text" class="login-input" id="wsUrlInput" data-i18n-placeholder="wsUrlPlaceholder" placeholder="WebSocket地址">
+    <input type="text" class="login-input" id="urlInput" data-i18n-placeholder="proxyUrlPlaceholder" placeholder="代理地址">
+    <input type="password" class="login-input" id="tokenInput" data-i18n-placeholder="tokenPlaceholder" placeholder="访问令牌">
+    <input type="text" class="login-input" id="sessionKey" data-i18n-placeholder="sessionPlaceholder" placeholder="会话ID">
+    <button class="login-btn" onclick="doLogin()" data-i18n="connectBtn">连接</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+
+  <div class="hidden" id="chat">
+    <div class="header">
+      <div class="header-left" id="sessionInfo"><span data-i18n="sessionLabel">会话</span>: main</div>
+      <div class="header-center" id="headerTitle">🤖 <span data-i18n="appName">小强 AI</span></div>
+      <div class="header-right">
+        <button class="header-btn" id="refreshBtn" onclick="refreshHistory()" data-i18n-title="refreshBtn" title="刷新消息">🔄</button>
+        <button class="lang-btn" id="langBtn" onclick="toggleLang()" title="切换语言">EN</button>
+        <button class="header-btn" id="menuBtn" onclick="toggleNav()" data-i18n-title="menuBtn" title="菜单">☰</button>
+      </div>
+    </div>
+    <!-- 工作状态指示器 -->
+    <div class="work-indicator" id="workIndicator" data-i18n="working">工作中...</div>
+    <div class="chat" id="chatArea"></div>
+    <div class="input-wrap">
+      <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
+      <button class="img-btn" onclick="document.getElementById('imgInput').click()" data-i18n-title="sendImageBtn" title="发送图片">📷</button>
+      <input type="text" class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息..." enterkeyhint="send">
+      <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
+      <div class="img-preview" id="imgPreview">
+        <div class="img-list" id="imgList"></div>
+        <div class="img-count" id="imgCount"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 导航面板 -->
+  <div class="nav-panel" id="navPanel" onclick="closeNav(event)">
+    <div class="nav-content" onclick="event.stopPropagation()">
+      <div class="nav-title" data-i18n="menuTitle">📋 菜单</div>
+      
+      <div class="nav-section">
+        <div class="nav-section-title" data-i18n="chatSection">聊天</div>
+        <a href="javascript:void(0)" class="nav-link" onclick="closeNav();">
+          <span class="icon">💬</span>
+          <div>
+            <div class="text" data-i18n="currentSession">当前会话</div>
+            <div class="desc" id="navSessionInfo"><span data-i18n="sessionLabel">会话</span>: main</div>
+          </div>
+        </a>
+      </div>
+      
+      <div class="nav-section">
+        <div class="nav-section-title" data-i18n="fileSection">文件浏览</div>
+        <a href="/browse/" class="nav-link">
+          <span class="icon">📁</span>
+          <div>
+            <div class="text" data-i18n="rootDir">根目录</div>
+            <div class="desc" data-i18n="rootDirDesc">浏览所有文件</div>
+          </div>
+        </a>
+        <a href="/browse/media" class="nav-link">
+          <span class="icon">🖼️</span>
+          <div>
+            <div class="text" data-i18n="mediaDir">Media 文件</div>
+            <div class="desc" data-i18n="mediaDirDesc">截图、图片、视频</div>
+          </div>
+        </a>
+        <a href="/browse/workspace" class="nav-link">
+          <span class="icon">📂</span>
+          <div>
+            <div class="text" data-i18n="workspaceDir">Workspace</div>
+            <div class="desc" data-i18n="workspaceDirDesc">工作目录文件</div>
+          </div>
+        </a>
+      </div>
+      
+      <div class="nav-section">
+        <div class="nav-section-title" data-i18n="otherSection">其他</div>
+        <a href="#" class="nav-link" id="dashboardLink">
+          <span class="icon">🎛️</span>
+          <div>
+            <div class="text" data-i18n="dashboard">Dashboard</div>
+            <div class="desc" data-i18n="dashboardDesc">完整控制面板 (18789)</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="clearHistory(); closeNav();">
+          <span class="icon">🗑️</span>
+          <div>
+            <div class="text" data-i18n="clearHistory">清除历史</div>
+            <div class="desc" data-i18n="clearHistoryDesc">清除本地聊天记录</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="logout(); closeNav();">
+          <span class="icon">🚪</span>
+          <div>
+            <div class="text" data-i18n="logout">退出登录</div>
+            <div class="desc" data-i18n="logoutDesc">清除登录状态，重新连接</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== WebSocket 客户端实现 ==========
+    class GatewayClient {
+      constructor(url, token, sessionKey, onEvent, onConnect, onDisconnect) {
+        this.url = url;
+        this.token = token;
+        this.sessionKey = sessionKey;
+        this.onEvent = onEvent;
+        this.onConnect = onConnect;
+        this.onDisconnect = onDisconnect;
+        this.ws = null;
+        this.pending = new Map();
+        this.connected = false;
+        this.reconnectTimer = null;
+      }
+      
+      connect() {
+        // 直接使用传入的完整 WebSocket URL
+        console.log('Connecting to WebSocket:', this.url);
+        this.ws = new WebSocket(this.url);
+        
+        this.ws.onopen = () => {
+          console.log('WebSocket connected');
+          this.connected = true;
+          this.sendConnect();
+        };
+        
+        this.ws.onmessage = (event) => this.handleMessage(event.data);
+        
+        this.ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+        
+        this.ws.onclose = (event) => {
+          console.log('WebSocket closed:', event.code, event.reason);
+          this.connected = false;
+          this.onDisconnect?.(event.code, event.reason);
+          // 自动重连
+          this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+        };
+      }
+      
+      disconnect() {
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer);
+          this.reconnectTimer = null;
+        }
+        if (this.ws) {
+          this.ws.close();
+          this.ws = null;
+        }
+      }
+      
+      sendConnect() {
+        // 注意：nonce 应该在 device 对象中，但 dangerouslyDisableDeviceAuth=true 时不需要 device
+        // 所以我们只发送 token，不发送 nonce
+        const authObj = this.token ? { token: this.token } : {};
+        
+        const msg = {
+          type: 'req',
+          id: this.genId(),
+          method: 'connect',
+          params: {
+            minProtocol: 3,
+            maxProtocol: 3,
+            client: {
+              id: 'openclaw-control-ui',
+              version: '1.0',
+              platform: navigator.platform || 'web',
+              mode: 'webchat',
+              instanceId: this.genId()
+            },
+            caps: ['tool-events'],  // 启用工具事件接收
+            scopes: ['operator.admin', 'operator.approvals', 'operator.pairing', 'operator.write', 'operator.read'],
+            auth: authObj
+          }
+        };
+        console.log('【DEBUG】发送 connect 消息，scopes:', JSON.stringify(msg.params.scopes));
+        console.log('发送 connect 消息:', JSON.stringify(msg, null, 2));
+        this.ws.send(JSON.stringify(msg));
+      }
+      
+      handleMessage(data) {
+        try {
+          console.log('[WS] Raw message:', data.substring(0, 300));
+          const msg = JSON.parse(data);
+          
+          // 打印所有收到的消息，便于调试
+          console.log('[WS] Parsed message:', msg.type, msg.method || msg.event);
+          if (msg.type === 'res' || msg.type === 'event') {
+            console.log('收到消息:', msg.type, msg.method || msg.event, msg);
+          }
+          
+          if (msg.type === 'res') {
+            // 检查是否是 hello-ok 响应
+            if (msg.ok && msg.payload?.type === 'hello-ok') {
+              console.log('Gateway hello-ok received:', msg.payload);
+              this.authenticated = true;
+              this.onConnect?.(msg.payload);
+            }
+            
+            const pending = this.pending.get(msg.id);
+            if (pending) {
+              this.pending.delete(msg.id);
+              if (msg.ok) {
+                pending.resolve(msg.payload);
+              } else {
+                console.error('请求失败:', msg.error);
+                pending.reject(new Error(msg.error?.message || 'Request failed'));
+              }
+            }
+          } else if (msg.type === 'event') {
+            // 处理 connect.challenge 事件 - 需要用 nonce 认证
+            if (msg.event === 'connect.challenge') {
+              const nonce = msg.payload?.nonce;
+              if (nonce) {
+                console.log('收到 connect.challenge, nonce:', nonce);
+                this.connectNonce = nonce;
+                this.sendConnect(); // 发送认证
+              }
+            }
+            // 处理 hello 事件（连接成功）
+            else if (msg.event === 'hello') {
+              console.log('Gateway hello:', msg.payload);
+              this.authenticated = true;
+              this.onConnect?.(msg.payload);
+            }
+            // 其他事件
+            else if (this.onEvent) {
+              this.onEvent(msg.event, msg.payload);
+            }
+          }
+        } catch(e) {
+          console.error('Parse message error:', e, data);
+        }
+      }
+      
+      request(method, params) {
+        return new Promise((resolve, reject) => {
+          if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            reject(new Error('WebSocket not connected'));
+            return;
+          }
+          
+          const id = this.genId();
+          const fullParams = { sessionKey: this.sessionKey, ...params };
+          const msg = {
+            type: 'req',
+            id,
+            method,
+            params: fullParams
+          };
+          
+          console.log('发送请求:', method, fullParams);
+          
+          this.pending.set(id, { resolve, reject, method });
+          this.ws.send(JSON.stringify(msg));
+          
+          // 超时处理
+          setTimeout(() => {
+            if (this.pending.has(id)) {
+              this.pending.delete(id);
+              reject(new Error('Request timeout: ' + method));
+            }
+          }, 30000);
+        });
+      }
+      
+      // 发送消息
+      async sendMessage(message, attachments = []) {
+        return this.request('chat.send', {
+          message,
+          deliver: false,
+          idempotencyKey: this.genId(),
+          attachments
+        });
+      }
+      
+      // 获取历史消息
+      async getHistory(limit = 50) {
+        console.log('获取历史消息, sessionKey:', this.sessionKey, 'limit:', limit);
+        try {
+          const result = await this.request('chat.history', { sessionKey: this.sessionKey, limit });
+          console.log('历史消息原始结果:', JSON.stringify(result).substring(0, 500));
+          
+          // 尝试多种可能的返回格式
+          if (result?.messages) {
+            return result.messages;
+          } else if (Array.isArray(result)) {
+            return result;
+          } else if (result?.data?.messages) {
+            return result.data.messages;
+          } else if (result?.history) {
+            return result.history;
+          }
+          
+          console.log('无法解析历史消息格式');
+          return [];
+        } catch(e) {
+          console.error('获取历史消息失败:', e);
+          return [];
+        }
+      }
+      
+      // 终止运行
+      async abort() {
+        return this.request('chat.abort', {});
+      }
+      
+      genId() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+      }
+    }
+    
+    // ========== 应用逻辑 ==========
+    // 强制使用 /api 代理和正确的session key（与Dashboard共享）
+    let gateway = '/api';
+    let authToken = ''; // 将在页面加载时从 config.js 初始化
+    let sessionKey = 'agent:main:main';
+    let selectedImages = []; // 存储选中的图片 [{file, base64, id}]
+    let gwClient = null; // WebSocket 客户端
+    
+    // 页面加载时设置默认值
+    window.addEventListener('load', function() {
+      // 从 config.js 获取 token（config.js 已在外部脚本加载）
+      if (window.getToken) {
+        authToken = window.getToken();
+      } else {
+        authToken = localStorage.getItem('oc_token') || 'YOUR_GATEWAY_TOKEN_HERE';
+      }
+      
+      // 智能检测 WebSocket URL
+      const currentHost = window.location.hostname;
+      const currentProtocol = window.location.protocol;
+      
+      // 使用配置文件中的函数获取 WebSocket URL
+      let defaultWsUrl;
+      if (window.getWebSocketUrl) {
+        defaultWsUrl = window.getWebSocketUrl();
+      } else {
+        // 兜底：使用配置文件中的默认值
+        defaultWsUrl = window.OPENCLAW_CONFIG?.gateway?.defaultWsUrl || 'ws://localhost:18789/';
+      }
+      
+      document.getElementById('wsUrlInput').value = defaultWsUrl;
+      console.log('Default WebSocket URL:', defaultWsUrl);
+      console.log('Location hostname:', currentHost);
+      console.log('Location protocol:', currentProtocol);
+      
+      document.getElementById('urlInput').value = gateway;
+      document.getElementById('urlInput').disabled = true; // 代理地址固定
+      document.getElementById('tokenInput').value = authToken;
+      // tokenInput 可编辑，用户可以修改
+      document.getElementById('sessionKey').value = sessionKey;
+      document.getElementById('sessionKey').disabled = true; // 会话ID固定
+      document.getElementById('sessionInfo').textContent = sessionKey;
+      
+      // 设置 Dashboard 链接（从 WebSocket URL 转换）
+      const dashboardUrl = defaultWsUrl
+        .replace('ws://', 'http://')
+        .replace('wss://', 'https://')
+        .replace(/\/$/, ''); // 移除末尾斜杠
+      const dashboardLink = document.getElementById('dashboardLink');
+      if (dashboardLink) {
+        dashboardLink.href = dashboardUrl;
+        dashboardLink.target = '_blank';
+        console.log('Dashboard URL:', dashboardUrl);
+      }
+
+      // 尝试自动登录
+      if (!autoLogin()) {
+        console.log('Auto-login skipped, showing login page');
+      }
+    });
+
+    function showWorkIndicator(show, text) {
+      const indicator = document.getElementById('workIndicator');
+      if (show) {
+        indicator.textContent = text || i18n.t('working');
+        indicator.classList.add('active');
+      } else {
+        indicator.classList.remove('active');
+      }
+    }
+    
+    function scrollToBottom() {
+      setTimeout(() => {
+        document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+      }, 100);
+    }
+
+    // 历史消息存储（使用 localStorage）
+    let messageHistory = [];
+    const HISTORY_KEY = 'oc_mobile_history';
+    const MAX_HISTORY = 100;
+    
+    // 登录状态存储
+    const LOGIN_KEY = 'oc_login_state';
+    const LOGIN_EXPIRY_MS = 60 * 60 * 1000; // 1小时有效期
+    
+    // 保存登录状态
+    function saveLoginState(wsUrl, token, sessionKey) {
+      const state = {
+        wsUrl: wsUrl,
+        token: token,
+        sessionKey: sessionKey,
+        loginTime: Date.now()
+      };
+      localStorage.setItem(LOGIN_KEY, JSON.stringify(state));
+      console.log('Login state saved');
+    }
+    
+    // 获取登录状态
+    function getLoginState() {
+      const stateStr = localStorage.getItem(LOGIN_KEY);
+      if (!stateStr) return null;
+      
+      try {
+        const state = JSON.parse(stateStr);
+        const elapsed = Date.now() - state.loginTime;
+        
+        // 检查是否过期
+        if (elapsed > LOGIN_EXPIRY_MS) {
+          console.log('Login state expired, elapsed:', Math.floor(elapsed / 60000), 'minutes');
+          localStorage.removeItem(LOGIN_KEY);
+          return null;
+        }
+        
+        console.log('Login state valid, remaining:', Math.floor((LOGIN_EXPIRY_MS - elapsed) / 60000), 'minutes');
+        return state;
+      } catch (e) {
+        console.error('Failed to parse login state:', e);
+        return null;
+      }
+    }
+    
+    // 清除登录状态
+    function clearLoginState() {
+      localStorage.removeItem(LOGIN_KEY);
+    }
+    
+    // 保存消息到本地存储
+    function saveMessageToHistory(msg) {
+      try {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        history.push({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp || Date.now()
+        });
+        // 保留最近的消息
+        if (history.length > MAX_HISTORY) {
+          history.splice(0, history.length - MAX_HISTORY);
+        }
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      } catch(e) {
+        console.error('保存历史消息失败:', e);
+      }
+    }
+    
+    // 加载历史消息（从 localStorage）
+    function loadHistory() {
+      const chatArea = document.getElementById('chatArea');
+      chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">加载历史消息中...</div>';
+      
+      try {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        messageHistory = history;
+        
+        // 清空并渲染历史消息
+        chatArea.innerHTML = '';
+        
+        if (messageHistory.length === 0) {
+          chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">暂无历史消息<br>开始新对话吧</div>';
+          return;
+        }
+        
+        // 渲染历史消息
+        for (const msg of messageHistory) {
+          renderHistoryMessage(msg);
+        }
+        
+        scrollToBottom();
+        
+      } catch(e) {
+        console.error('加载历史消息失败:', e);
+        chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#ff453a;">加载历史消息失败</div>';
+      }
+    }
+    
+    // 渲染单条历史消息
+    function renderHistoryMessage(msg) {
+      const area = document.getElementById('chatArea');
+      const isUser = msg.role === 'user';
+      const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+      
+      const div = document.createElement('div');
+      div.className = 'msg ' + (isUser ? 'user' : 'ai');
+      
+      // 处理消息内容
+      let contentHtml = '';
+      if (typeof msg.content === 'string') {
+        contentHtml = fmt(msg.content);
+      } else if (Array.isArray(msg.content)) {
+        // 处理多模态消息（图片+文字）
+        for (const item of msg.content) {
+          if (item.type === 'text') {
+            contentHtml += fmt(item.text);
+          } else if (item.type === 'image_url' || item.type === 'image') {
+            const imgUrl = item.image_url?.url || item.url || item.content || '';
+            if (imgUrl && typeof imgUrl === 'string') {
+              contentHtml += '<img src="' + imgUrl + '" style="max-width:150px;max-height:150px;border-radius:12px;margin:4px 0;">';
+            }
+          }
+        }
+      }
+      
+      div.innerHTML = '<div class="av">' + (isUser ? '👤' : '🤖') + '</div><div class="bubble">' + contentHtml + '<div class="time">' + time + '</div></div>';
+      area.appendChild(div);
+    }
+    
+    // 清除历史记录
+    function clearHistory() {
+      if (confirm('确定要清除所有历史消息吗？')) {
+        localStorage.removeItem(HISTORY_KEY);
+        messageHistory = [];
+        document.getElementById('chatArea').innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">历史已清除<br>开始新对话吧</div>';
+      }
+    }
+    
+    // 退出登录
+    function logout() {
+      if (confirm('确定要退出登录吗？\n\n退出后需要重新连接。')) {
+        clearLoginState();
+        localStorage.removeItem(HISTORY_KEY);
+        messageHistory = [];
+        
+        // 断开连接
+        if (gwClient) {
+          gwClient.disconnect();
+        }
+        
+        // 返回登录页面
+        document.getElementById('chat').classList.add('hidden');
+        document.getElementById('login').classList.remove('hidden');
+        document.getElementById('chatArea').innerHTML = '';
+      }
+    }
+    
+    function doLogin() {
+      gateway = document.getElementById('urlInput').value.trim() || '/api';
+      const wsUrlInput = document.getElementById('wsUrlInput').value.trim();
+      const wsUrl = wsUrlInput || 'ws://your-gateway-hostname.tailXXXX.ts.net:18789/';
+      
+      authToken = document.getElementById('tokenInput').value.trim();
+      sessionKey = document.getElementById('sessionKey').value.trim() || 'agent:main:main';
+      
+      // 保存登录状态（1小时有效期）
+      saveLoginState(wsUrl, authToken, sessionKey);
+      localStorage.setItem('oc_token', authToken);
+      document.getElementById('sessionInfo').textContent = sessionKey;
+      
+      // 进入聊天界面
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('chat').classList.remove('hidden');
+      
+      // 建立 WebSocket 连接
+      connectWebSocket(wsUrl);
+    }
+    
+    // 自动登录（使用保存的登录状态）
+    function autoLogin() {
+      const state = getLoginState();
+      if (!state) {
+        console.log('No valid login state, showing login page');
+        return false;
+      }
+      
+      console.log('Found valid login state, auto-connecting...');
+      
+      // 使用保存的状态
+      authToken = state.token;
+      sessionKey = state.sessionKey;
+      
+      localStorage.setItem('oc_token', authToken);
+      document.getElementById('sessionInfo').textContent = sessionKey;
+      
+      // 进入聊天界面
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('chat').classList.remove('hidden');
+      
+      // 建立 WebSocket 连接
+      connectWebSocket(state.wsUrl);
+      
+      return true;
+    }
+    
+    // 建立 WebSocket 连接
+    function connectWebSocket(wsUrl) {
+      console.log('connectWebSocket called with URL:', wsUrl);
+      const chatArea = document.getElementById('chatArea');
+      chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">连接中...<br><small>' + wsUrl + '</small></div>';
+      
+      console.log('Connecting to WebSocket:', wsUrl);
+      
+      console.log('Creating GatewayClient...');
+      gwClient = new GatewayClient(
+        wsUrl,           // url
+        authToken,       // token
+        sessionKey,       // sessionKey
+        // onEvent
+        (event, payload) => {
+          console.log('Event:', event, payload);
+          if (event === 'chat') {
+            handleChatEvent(payload);
+          } else if (event === 'agent') {
+            handleAgentEvent(payload);
+          }
+        },
+        // onConnect
+        (hello) => {
+          console.log('Connected!', hello);
+          // 清除工作状态指示器
+          showWorkIndicator(false);
+          // 清除连接中状态
+          const chatArea = document.getElementById('chatArea');
+          chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#34c759;">✅ 已连接，正在加载历史消息...</div>';
+          // 获取历史消息
+          loadHistoryFromGateway();
+        },
+        // onDisconnect
+        (code, reason) => {
+          console.log('Disconnected:', code, reason);
+          showWorkIndicator(true, '连接断开，正在重连...');
+        }
+      );
+      
+      gwClient.connect();
+    }
+    
+    // 刷新历史消息
+    async function refreshHistory() {
+      const refreshBtn = document.getElementById('refreshBtn');
+      const chatArea = document.getElementById('chatArea');
+      
+      // 检查连接状态
+      if (!gwClient || !gwClient.authenticated) {
+        chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#ff453a;">连接已断开<br>请刷新页面重新连接</div>';
+        return;
+      }
+      
+      // 显示加载状态
+      refreshBtn.classList.add('loading');
+      refreshBtn.disabled = true;
+      
+      // 显示刷新提示
+      const loadingHint = document.createElement('div');
+      loadingHint.id = 'refreshHint';
+      loadingHint.style.cssText = 'text-align:center;padding:10px;color:var(--accent);font-size:13px;animation:in .25s ease-out;';
+      loadingHint.textContent = '🔄 正在刷新...';
+      chatArea.insertBefore(loadingHint, chatArea.firstChild);
+      
+      try {
+        // 重新加载历史消息
+        await loadHistoryFromGateway();
+        
+        // 显示成功提示
+        const successHint = document.createElement('div');
+        successHint.style.cssText = 'text-align:center;padding:10px;color:var(--green);font-size:13px;animation:in .25s ease-out;';
+        successHint.textContent = '✅ 刷新成功';
+        chatArea.insertBefore(successHint, chatArea.firstChild);
+        
+        // 2秒后移除成功提示
+        setTimeout(() => {
+          successHint.remove();
+        }, 2000);
+        
+      } catch (e) {
+        console.error('刷新失败:', e);
+        
+        // 显示失败提示
+        const errorHint = document.createElement('div');
+        errorHint.style.cssText = 'text-align:center;padding:10px;color:var(--red);font-size:13px;';
+        errorHint.textContent = '❌ 刷新失败: ' + e.message;
+        chatArea.insertBefore(errorHint, chatArea.firstChild);
+        
+        // 3秒后移除失败提示
+        setTimeout(() => {
+          errorHint.remove();
+        }, 3000);
+        
+      } finally {
+        // 移除加载状态
+        refreshBtn.classList.remove('loading');
+        refreshBtn.disabled = false;
+        
+        // 移除刷新提示
+        const hint = document.getElementById('refreshHint');
+        if (hint) hint.remove();
+      }
+    }
+    
+    // 从 Gateway 加载历史消息
+    async function loadHistoryFromGateway() {
+      const chatArea = document.getElementById('chatArea');
+      
+      if (!gwClient || !gwClient.authenticated) {
+        chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#ff453a;">连接已断开<br>请刷新页面重新连接</div>';
+        return;
+      }
+      
+      try {
+        const messages = await gwClient.getHistory(50);
+        chatArea.innerHTML = '';
+        
+        if (!messages || messages.length === 0) {
+          chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">暂无历史消息<br>开始新对话吧</div>';
+          return;
+        }
+        
+        // 渲染历史消息
+        for (const msg of messages) {
+          renderHistoryMessage(msg);
+        }
+        
+        scrollToBottom();
+        
+      } catch(e) {
+        console.error('加载历史消息失败:', e);
+        // 如果获取失败，尝试从本地存储加载
+        try {
+          const localHistory = JSON.parse(localStorage.getItem('oc_mobile_history') || '[]');
+          chatArea.innerHTML = '';
+          if (localHistory.length > 0) {
+            for (const msg of localHistory.slice(-50)) {
+              renderHistoryMessage(msg);
+            }
+            chatArea.innerHTML += '<div style="text-align:center;padding:10px;color:#8e8e93;font-size:12px;">(显示本地缓存的历史消息)</div>';
+          } else {
+            chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">暂无历史消息<br>开始新对话吧</div>';
+          }
+        } catch(e2) {
+          chatArea.innerHTML = '<div style="text-align:center;padding:20px;color:#8e8e93;">暂无历史消息<br>开始新对话吧</div>';
+        }
+      }
+    }
+    
+    // 处理 agent 事件（工具调用、思考过程等）
+    function handleAgentEvent(payload) {
+      if (!payload) return;
+      
+      const stream = payload.stream;
+      const data = payload.data;
+      
+      console.log('[handleAgentEvent] stream:', stream, 'data:', JSON.stringify(data).substring(0, 500));
+      
+      if (stream === 'tool') {
+        // 工具调用事件
+        handleToolEvent(data, payload);
+      } else if (stream === 'assistant') {
+        // AI 回复事件（流式输出）- 只更新，不重复创建
+        // 注意：chat 事件也会处理文本，这里只处理工具相关
+        console.log('[handleAgentEvent] assistant stream - 文本由 chat 事件处理');
+      } else if (stream === 'lifecycle') {
+        // 生命周期事件（开始、结束等）
+        handleLifecycleEvent(data, payload);
+      }
+    }
+    
+    // 处理工具调用事件
+    function handleToolEvent(data, payload) {
+      if (!data) return;
+      
+      // 调试：打印完整的工具事件数据
+      console.log('[handleToolEvent] 完整 data:', JSON.stringify(data, null, 2));
+      console.log('[handleToolEvent] 完整 payload:', JSON.stringify(payload, null, 2));
+      
+      const toolName = data.name || data.tool_name || 'unknown';
+      const phase = data.phase || data.status || 'running';
+      // 支持多种参数字段名：input, meta, arguments, params
+      const input = data.input || data.meta || data.arguments || data.params;
+      const result = data.result || data.output;
+      const isError = data.isError === true;
+      
+      console.log('[handleToolEvent] tool:', toolName, 'phase:', phase, 'input:', input ? '有' : '无', 'result:', result ? '有' : '无', 'isError:', isError);
+      
+      // 更新工作指示器
+      if (phase === 'start' || phase === 'running') {
+        showWorkIndicator(true, '🔧 ' + toolName + '...');
+      }
+      
+      // 获取或创建 AI 消息容器
+      let aiMsg = document.querySelector('.msg.ai:last-child');
+      if (!aiMsg) {
+        const area = document.getElementById('chatArea');
+        aiMsg = document.createElement('div');
+        aiMsg.className = 'msg ai';
+        aiMsg.innerHTML = '<div class="av">🤖</div><div class="bubble"><div class="reply-tools"></div></div>';
+        area.appendChild(aiMsg);
+      }
+      
+      const toolsDiv = aiMsg.querySelector('.reply-tools');
+      if (!toolsDiv) return;
+      
+      // 查找或创建工具卡片
+      let toolCard = toolsDiv.querySelector('[data-tool="' + toolName + '"]');
+      
+      // result 阶段表示工具执行完成，需要更新状态
+      if (phase === 'result') {
+        // 如果没有工具卡片，创建一个
+        if (!toolCard) {
+          toolCard = document.createElement('div');
+          toolCard.className = 'tool-call';
+          toolCard.dataset.tool = toolName;
+          toolsDiv.appendChild(toolCard);
+        }
+        
+        // 更新工具卡片内容
+        let inputHtml = '';
+        if (input) {
+          const inputStr = typeof input === 'string' ? input : JSON.stringify(input, null, 2);
+          inputHtml = '<div class="tool-content">参数:<br>' + escapeHtml(inputStr.substring(0, 500)) + '</div>';
+        }
+        
+        const statusClass = isError ? 'error' : 'done';
+        const statusText = isError ? '失败' : '完成';
+        
+        toolCard.innerHTML = 
+          '<div class="tool-header">' +
+            '<span class="tool-icon">' + (isError ? '❌' : '✅') + '</span>' +
+            '<span class="tool-name">' + escapeHtml(toolName) + '</span>' +
+            '<span class="tool-status ' + statusClass + '">' + statusText + '</span>' +
+          '</div>' + inputHtml;
+        
+        showWorkIndicator(false);
+        scrollToBottom();
+      } else if (phase === 'start' || phase === 'running') {
+        // 创建新的工具卡片
+        if (!toolCard) {
+          toolCard = document.createElement('div');
+          toolCard.className = 'tool-call';
+          toolCard.dataset.tool = toolName;
+          
+          let inputHtml = '';
+          if (input) {
+            const inputStr = typeof input === 'string' ? input : JSON.stringify(input, null, 2);
+            inputHtml = '<div class="tool-content">参数:<br>' + escapeHtml(inputStr.substring(0, 500)) + '</div>';
+          }
+          
+          toolCard.innerHTML = 
+            '<div class="tool-header">' +
+              '<span class="tool-icon">🔧</span>' +
+              '<span class="tool-name">' + escapeHtml(toolName) + '</span>' +
+              '<span class="tool-status running">运行中</span>' +
+            '</div>' + inputHtml;
+          
+          toolsDiv.appendChild(toolCard);
+          scrollToBottom();
+        }
+      } else if (phase === 'end' || phase === 'done' || phase === 'complete') {
+        // 更新工具卡片状态
+        if (toolCard) {
+          const statusSpan = toolCard.querySelector('.tool-status');
+          if (statusSpan) {
+            statusSpan.className = 'tool-status done';
+            statusSpan.textContent = '完成';
+          }
+          
+          // 添加结果
+          if (result) {
+            const resultStr = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+            const contentDiv = toolCard.querySelector('.tool-content');
+            if (contentDiv) {
+              contentDiv.innerHTML += '<br><br>结果:<br>' + escapeHtml(resultStr.substring(0, 1000));
+            } else {
+              toolCard.innerHTML += '<div class="tool-content">结果:<br>' + escapeHtml(resultStr.substring(0, 1000)) + '</div>';
+            }
+          }
+        }
+        showWorkIndicator(false);
+      } else if (phase === 'error') {
+        // 错误状态
+        if (toolCard) {
+          const statusSpan = toolCard.querySelector('.tool-status');
+          if (statusSpan) {
+            statusSpan.className = 'tool-status error';
+            statusSpan.textContent = '失败';
+          }
+          if (error) {
+            toolCard.innerHTML += '<div class="tool-content" style="color:#ff453a;">错误: ' + escapeHtml(error) + '</div>';
+          }
+        }
+        showWorkIndicator(false);
+      }
+    }
+    
+    // 处理 AI 回复流
+    function handleAssistantStream(data, payload) {
+      if (!data) return;
+      
+      const text = data.text || data.delta || '';
+      
+      if (text) {
+        // 获取或创建 AI 消息气泡
+        let aiMsg = document.querySelector('.msg.ai:last-child');
+        if (!aiMsg) {
+          const area = document.getElementById('chatArea');
+          aiMsg = document.createElement('div');
+          aiMsg.className = 'msg ai';
+          aiMsg.innerHTML = '<div class="av">🤖</div><div class="bubble"></div>';
+          area.appendChild(aiMsg);
+        }
+        
+        const bubble = aiMsg.querySelector('.bubble');
+        if (bubble) {
+          // 追加文本（流式输出）
+          const currentText = bubble.dataset.rawText || '';
+          const newText = currentText + text;
+          bubble.dataset.rawText = newText;
+          bubble.innerHTML = fmt(newText);
+          scrollToBottom();
+        }
+      }
+    }
+    
+    // 处理生命周期事件
+    function handleLifecycleEvent(data, payload) {
+      const phase = data.phase;
+      console.log('[handleLifecycleEvent] phase:', phase);
+      
+      if (phase === 'start') {
+        showWorkIndicator(true, '🤔 思考中...');
+      } else if (phase === 'end' || phase === 'complete') {
+        showWorkIndicator(false);
+        document.getElementById('sendBtn').disabled = false;
+        
+        // 保存到历史记录
+        const bubble = document.querySelector('.msg.ai:last-child .bubble');
+        if (bubble && bubble.dataset.rawText) {
+          saveMessageToHistory({ 
+            role: 'assistant', 
+            content: bubble.dataset.rawText, 
+            timestamp: Date.now() 
+          });
+        }
+      }
+    }
+    
+    // 处理聊天事件（实时消息）
+    function handleChatEvent(payload) {
+      if (!payload) return;
+      
+      const state = payload.state;
+      const message = payload.message;
+      
+      // 调试：打印完整的消息结构
+      console.log('[handleChatEvent] state:', state);
+      console.log('[handleChatEvent] message:', JSON.stringify(message, null, 2).substring(0, 1000));
+      
+      if (state === 'delta') {
+        // 流式输出中
+        const aiMsg = document.querySelector('.msg.ai:last-child .bubble');
+        if (aiMsg && message) {
+          const content = extractContent(message);
+          if (content) {
+            aiMsg.innerHTML = fmt(content);
+            scrollToBottom();
+          }
+        }
+        
+        // 处理思考过程 - 检查多种可能的消息格式
+        const thinkingContent = message?.thinking || message?.message?.thinking || 
+                              (message?.content && message.content.find?.(c => c.thinking)?.thinking);
+        if (thinkingContent) {
+          showWorkIndicator(true, '💭 思考中...');
+          
+          // 在消息气泡内显示思考内容 - 完整详细显示
+          let aiMsg = document.querySelector('.msg.ai:last-child');
+          if (!aiMsg) {
+            const area = document.getElementById('chatArea');
+            aiMsg = document.createElement('div');
+            aiMsg.className = 'msg ai';
+            aiMsg.innerHTML = '<div class="av">🤖</div><div class="bubble"><div class="reply-thinking"></div><div class="reply-tools"></div></div>';
+            area.appendChild(aiMsg);
+          }
+          
+          const thinkingDiv = aiMsg.querySelector('.reply-thinking');
+          if (thinkingDiv) {
+            // 完整显示思考内容，带标题和样式
+            thinkingDiv.innerHTML = '<div class="thinking"><div class="thinking-header"><span class="thinking-icon">🧠</span><span class="thinking-title">思考中</span></div><div class="thinking-content">' + escapeHtml(thinkingContent) + '</div></div>';
+            scrollToBottom();
+          }
+        }
+        
+        // 处理工具调用 - 检查多种可能的消息格式
+        const toolCalls = message?.tool_calls || message?.message?.tool_calls ||
+                         (message?.content && message.content.find?.(c => c.tool_calls)?.tool_calls);
+        if (toolCalls) {
+          for (const tc of toolCalls) {
+            if (tc.type === 'tool_call_start') {
+              showWorkIndicator(true, '⚙️ 执行 ' + tc.name + '...');
+              
+              // 创建工具调用卡片
+              let aiMsg = document.querySelector('.msg.ai:last-child');
+              if (!aiMsg) {
+                const area = document.getElementById('chatArea');
+                aiMsg = document.createElement('div');
+                aiMsg.className = 'msg ai';
+                aiMsg.innerHTML = '<div class="av">🤖</div><div class="bubble"><div class="reply-thinking"></div><div class="reply-tools"></div></div>';
+                area.appendChild(aiMsg);
+              }
+              
+              const toolsDiv = aiMsg.querySelector('.reply-tools');
+              if (toolsDiv) {
+                // 显示完整的工具调用信息
+                const toolInfo = tc.input ? JSON.stringify(tc.input, null, 2) : '';
+                const toolDiv = document.createElement('div');
+                toolDiv.className = 'tool-call';
+                toolDiv.innerHTML = '<div class="tool-header"><span class="tool-icon">🔧</span><span class="tool-name">' + escapeHtml(tc.name) + '</span><span class="tool-status running">运行中</span></div>' + 
+                  (toolInfo ? '<div class="tool-content">参数: ' + escapeHtml(toolInfo.substring(0, 500)) + '</div>' : '');
+                toolsDiv.appendChild(toolDiv);
+              }
+            }
+          }
+        }
+        
+        // 处理工具结果
+        const toolResults = message?.tool_results || message?.message?.tool_results;
+        if (toolResults) {
+          showWorkIndicator(true, '📝 处理结果...');
+          
+          let aiMsg = document.querySelector('.msg.ai:last-child');
+          const toolsDiv = aiMsg?.querySelector('.reply-tools');
+          if (toolsDiv && Array.isArray(toolResults)) {
+            for (const tr of toolResults) {
+              const toolDiv = toolsDiv.querySelector('[data-tool-id="' + tr.tool_call_id + '"]');
+              if (toolDiv) {
+                const statusSpan = toolDiv.querySelector('.tool-status');
+                if (statusSpan) {
+                  statusSpan.className = 'tool-status done';
+                  statusSpan.textContent = '完成';
+                }
+                const resultContent = tr.output ? (typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output, null, 2)) : '';
+                if (resultContent) {
+                  const contentDiv = toolDiv.querySelector('.tool-content');
+                  if (contentDiv) {
+                    contentDiv.innerHTML += '<br>结果: ' + escapeHtml(resultContent.substring(0, 1000));
+                  } else {
+                    toolDiv.innerHTML += '<div class="tool-content">结果: ' + escapeHtml(resultContent.substring(0, 1000)) + '</div>';
+                  }
+                }
+              }
+            }
+          }
+        }
+      } else if (state === 'final' || state === 'aborted') {
+        // 完成
+        showWorkIndicator(false);
+        
+        // 保存到历史记录（如果之前没有保存）
+        const aiMsg = document.querySelector('.msg.ai:last-child .bubble');
+        if (aiMsg) {
+          const content = aiMsg.innerText;
+          if (content && content !== '⏳ 响应完成') {
+            saveMessageToHistory({ role: 'assistant', content: content, timestamp: Date.now() });
+          }
+        }
+        
+        document.getElementById('sendBtn').disabled = false;
+      } else if (state === 'error') {
+        showWorkIndicator(false);
+        const aiMsg = document.querySelector('.msg.ai:last-child .bubble');
+        if (aiMsg) {
+          aiMsg.innerHTML = '❌ ' + (payload.errorMessage || '错误');
+        }
+        document.getElementById('sendBtn').disabled = false;
+      }
+    }
+    
+    // 从消息对象提取内容
+    function extractContent(message) {
+      if (!message) return '';
+      
+      let content = '';
+      
+      // 调试：打印消息结构
+      console.log('extractContent message:', JSON.stringify(message).substring(0, 300));
+      
+      // 处理数组格式的内容 [[{"type":"text","text":"..."}]]
+      if (Array.isArray(message)) {
+        for (const part of message) {
+          if (part && typeof part === 'object') {
+            if (part.type === 'text' && part.text) {
+              content += part.text;
+            } else if (part.content) {
+              content += typeof part.content === 'string' ? part.content : (part.content.text || JSON.stringify(part.content));
+            } else if (part.text) {
+              content += part.text;
+            }
+          } else if (typeof part === 'string') {
+            content += part;
+          }
+        }
+        return content;
+      }
+      
+      // 处理消息是对象的情况
+      if (typeof message === 'object') {
+        // 处理 message.content 是数组的情况
+        if (Array.isArray(message.content)) {
+          for (const part of message.content) {
+            if (part && typeof part === 'object') {
+              if (part.type === 'text' && part.text) {
+                content += part.text;
+              } else if (part.text) {
+                content += part.text;
+              }
+            } else if (typeof part === 'string') {
+              content += part;
+            }
+          }
+        }
+        // 尝试获取 message.content (非数组)
+        else if (message.content) {
+          if (typeof message.content === 'object') {
+            content = message.content.text || message.content.content || JSON.stringify(message.content);
+          } else {
+            content = message.content;
+          }
+        }
+        // 尝试获取 message.text (某些 API 格式)
+        else if (message.text) {
+          content = message.text;
+        }
+        // 尝试获取 message.message (嵌套结构)
+        else if (message.message) {
+          if (typeof message.message === 'object') {
+            content = message.message.content || message.message.text || JSON.stringify(message.message);
+          } else {
+            content = message.message;
+          }
+        }
+      } else if (typeof message === 'string') {
+        content = message;
+      }
+      
+      // 思考过程
+      if (message.thinking) {
+        content = '<span class="thinking-icon">💭</span> ' + message.thinking + (content ? '<br>' + content : '');
+      }
+      
+      return content;
+    }
+
+    function showErr(msg) {
+      document.getElementById('loginErr').textContent = msg;
+      document.getElementById('loginErr').style.display = 'block';
+      document.getElementById('loginErr').style.display = 'block';
+      console.error('Error:', msg);
+    }
+
+    async function sendMsg() {
+      const input = document.getElementById('msgInput');
+      const content = input.value.trim();
+      const imagesToSend = selectedImages.length > 0 ? [...selectedImages] : []; // 复制图片数组
+      
+      // 检查是否有内容或图片
+      if (!content && imagesToSend.length === 0) return;
+      
+      // 检查 WebSocket 是否已连接
+      if (!gwClient || !gwClient.authenticated) {
+        alert('请等待连接建立...');
+        return;
+      }
+
+      // 显示用户消息
+      if (imagesToSend.length > 0) {
+        const area = document.getElementById('chatArea');
+        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        const div = document.createElement('div');
+        div.className = 'msg user';
+        
+        // 生成多张图片 HTML
+        let imgHtml = '';
+        for (const img of imagesToSend) {
+          imgHtml += '<img src="' + img.base64 + '" style="max-width: 150px; max-height: 150px; border-radius: 12px; margin: 4px; display: inline-block;">';
+        }
+        let textHtml = content ? '<div>' + fmt(content) + '</div>' : '';
+        div.innerHTML = '<div class="av">👤</div><div class="bubble">' + imgHtml + textHtml + '<div class="time">' + time + '</div></div>';
+        area.appendChild(div);
+        
+        // 保存用户消息到历史记录（包含多张图片）
+        const userMsg = {
+          role: 'user',
+          content: [
+            { type: 'text', text: content || `请分析这${imagesToSend.length}张图片` },
+            ...imagesToSend.map(img => ({ type: 'image', url: img.base64 }))
+          ],
+          timestamp: Date.now()
+        };
+        saveMessageToHistory(userMsg);
+      } else {
+        addMsg({ content, role: 'user' });
+        saveMessageToHistory({ role: 'user', content: content, timestamp: Date.now() });
+      }
+      
+      input.value = '';
+      clearImages(); // 清除所有图片
+      document.getElementById('sendBtn').disabled = true;
+      scrollToBottom();
+
+      // 显示工作指示器
+      showWorkIndicator(true, '🤔 发送中...');
+      
+      // 创建 AI 消息容器
+      const aiMsg = createAIMessage();
+      const bubble = aiMsg.querySelector('.bubble');
+      const toolsDiv = aiMsg.querySelector('.reply-tools');
+      
+      bubble.innerHTML = '<span class="thinking-icon">🤔</span> 发送消息...';
+      
+      try {
+        // 通过 WebSocket 发送消息
+        let attachments = [];
+        if (imagesToSend.length > 0) {
+          // 处理所有图片 - 同时使用 base64 和服务器路径
+          for (const imgToSend of imagesToSend) {
+            if (imgToSend.base64 && imgToSend.base64.startsWith('data:')) {
+              // 提取 base64 数据
+              const match = imgToSend.base64.match(/^data:(image\/[^;]+);base64,(.+)$/);
+              if (match) {
+                attachments.push({ 
+                  type: 'image', 
+                  mimeType: match[1], 
+                  content: match[2],  // base64 数据
+                  path: imgToSend.serverPath  // 服务器路径（可选，供日志记录）
+                });
+                console.log('[DEBUG] 发送图片, 服务器路径:', imgToSend.serverPath);
+              }
+            }
+          }
+        }
+        console.log('[DEBUG] 发送图片数量:', imagesToSend.length, 'attachments:', attachments.length);
+        await gwClient.sendMessage(content || `请分析这${imagesToSend.length}张图片`, attachments);
+        
+        // 消息已发送，等待流式响应
+        bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待响应...';
+        
+      } catch(e) {
+        console.error('发送消息失败:', e);
+        bubble.innerHTML = '❌ 发送失败: ' + e.message;
+        showWorkIndicator(false);
+        document.getElementById('sendBtn').disabled = false;
+      }
+    }
+
+    function createAIMessage() {
+      const area = document.getElementById('chatArea');
+      const div = document.createElement('div');
+      div.className = 'msg ai';
+      div.innerHTML = `
+        <div class="av">🤖</div>
+        <div class="msg-content">
+          <div class="bubble"></div>
+          <div class="reply-tools"></div>
+        </div>
+      `;
+      area.appendChild(div);
+      return div;
+    }
+
+    function createToolElement(tool) {
+      const div = document.createElement('div');
+      div.className = 'tool-call';
+      div.dataset.toolId = tool.id;
+      div.innerHTML = `
+        <div class="tool-header">
+          <span class="tool-icon">🔧</span>
+          <span class="tool-name">${tool.name}</span>
+          <span class="tool-status running">运行中</span>
+        </div>
+        <div class="tool-content"></div>
+      `;
+      return div;
+    }
+
+    function addMsg(msg) {
+      const area = document.getElementById('chatArea');
+      const isUser = msg.role === 'user';
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      
+      const div = document.createElement('div');
+      div.className = 'msg ' + (isUser ? 'user' : 'ai');
+      div.innerHTML = '<div class="av">' + (isUser ? '👤' : '🤖') + '</div><div class="bubble">' + fmt(msg.content) + '<div class="time">' + time + '</div></div>';
+      area.appendChild(div);
+      scrollToBottom();
+    }
+
+    function escapeHtml(t) {
+      if (!t) return '';
+      return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    
+    function fmt(t) { 
+      if (!t) return '';
+      let html = escapeHtml(t).replace(/\n/g,'<br>');
+      
+      // 处理 MEDIA: 路径，转换为可访问的图片 URL
+      // MEDIA:/root/.openclaw/media/browser/xxx.jpg -> /media/browser/xxx.jpg (通过 8080 端口服务器)
+      html = html.replace(/MEDIA:([^\s<]+)/g, function(match, path) {
+        // 提取相对路径部分
+        // /root/.openclaw/media/browser/xxx.jpg -> browser/xxx.jpg
+        const mediaMatch = path.match(/\/root\/\.openclaw\/media\/(.+)$/);
+        if (mediaMatch) {
+          const relativePath = mediaMatch[1];
+          // 通过 8080 端口的 /media/ 路径访问
+          return '<img src="/media/' + relativePath + '" style="max-width:100%;max-height:300px;border-radius:12px;margin:8px 0;cursor:pointer;" onclick="showFullImage(this.src)" alt="图片" loading="lazy">';
+        }
+        // 如果路径已经是相对路径
+        if (!path.startsWith('/') && !path.startsWith('http')) {
+          return '<img src="/media/' + path + '" style="max-width:100%;max-height:300px;border-radius:12px;margin:8px 0;cursor:pointer;" onclick="showFullImage(this.src)" alt="图片" loading="lazy">';
+        }
+        return match; // 保持原样
+      });
+      
+      return html;
+    }
+    
+    // 点击图片查看大图
+    function showFullImage(src) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:zoom-out;';
+      overlay.onclick = function() { document.body.removeChild(overlay); };
+      
+      const img = document.createElement('img');
+      img.src = src;
+      img.style.cssText = 'max-width:95%;max-height:95%;border-radius:8px;object-fit:contain;';
+      
+      overlay.appendChild(img);
+      document.body.appendChild(overlay);
+    }
+
+    document.getElementById('msgInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+    });
+    
+    
+    // 图片选择处理 - 支持多图（最多 9 张）
+    async function handleImgSelect() {
+      const input = document.getElementById('imgInput');
+      const files = Array.from(input.files);
+      if (files.length === 0) return;
+      
+      // 检查文件数量（最多 9 张）
+      if (selectedImages.length + files.length > 9) {
+        alert('最多只能选择 9 张图片');
+        input.value = '';
+        return;
+      }
+      
+      // 检查文件大小 (最大 10MB)
+      for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          alert('图片大小不能超过 10MB: ' + file.name);
+          input.value = '';
+          return;
+        }
+      }
+      
+      // 显示上传指示器
+      showWorkIndicator(true, '📤 上传图片...');
+      
+      // 处理每张图片
+      for (const file of files) {
+        try {
+          // 压缩图片
+          const imgBase64 = await compressImage(file);
+          
+          // 上传到服务器
+          const serverPath = await uploadImage(imgBase64);
+          
+          // 添加到已选择列表
+          const id = Date.now() + Math.random();
+          selectedImages.push({ 
+            file, 
+            base64: imgBase64, 
+            serverPath,  // 服务器保存路径
+            id 
+          });
+          
+          console.log('[DEBUG] 图片上传成功:', serverPath);
+        } catch (err) {
+          console.error('图片处理失败:', err);
+          alert('图片上传失败: ' + err.message);
+        }
+      }
+      
+      // 隐藏上传指示器
+      showWorkIndicator(false);
+      
+      // 更新预览
+      updateImagePreview();
+      
+      // 清空 input，允许重复选择同一文件
+      input.value = '';
+    }
+    
+    // 上传图片到服务器
+    async function uploadImage(imgBase64) {
+      const response = await fetch(window.location.origin + '/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imgBase64 })
+      });
+      
+      if (!response.ok) {
+        throw new Error('上传失败: ' + response.status);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || '上传失败');
+      }
+      
+      return data.path;  // 返回服务器保存路径
+    }
+    
+    // 更新图片预览
+    function updateImagePreview() {
+      const preview = document.getElementById('imgPreview');
+      const imgList = document.getElementById('imgList');
+      const imgCount = document.getElementById('imgCount');
+      
+      if (selectedImages.length === 0) {
+        preview.classList.remove('has-img');
+        imgList.innerHTML = '';
+        imgCount.textContent = '';
+        return;
+      }
+      
+      preview.classList.add('has-img');
+      
+      // 生成预览 HTML
+      imgList.innerHTML = selectedImages.map((img, index) => `
+        <div class="img-item">
+          <img src="${img.base64}" alt="图片${index + 1}">
+          <button class="img-remove" onclick="removeImage(${img.id})" title="移除">×</button>
+        </div>
+      `).join('');
+      
+      // 显示数量
+      imgCount.textContent = `${selectedImages.length}张`;
+    }
+    
+    // 移除单张图片
+    function removeImage(id) {
+      selectedImages = selectedImages.filter(img => img.id !== id);
+      updateImagePreview();
+    }
+    
+    // 清空所有图片
+    function clearImages() {
+      selectedImages = [];
+      updateImagePreview();
+    }
+    
+    // 压缩图片为 base64
+    function compressImage(file) {
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            const maxWidth = 800;
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    // 移除已选择的图片
+    function removeImg() { clearImages(); }
+    
+    // ========== 导航面板 ==========
+    function toggleNav() {
+      const panel = document.getElementById('navPanel');
+      const menuBtn = document.getElementById('menuBtn');
+      if (panel.classList.contains('active')) {
+        panel.classList.remove('active');
+        menuBtn.classList.remove('active');
+        menuBtn.textContent = '☰';
+      } else {
+        panel.classList.add('active');
+        menuBtn.classList.add('active');
+        menuBtn.textContent = '✕';
+      }
+    }
+    
+    function closeNav(event) {
+      if (event && event.target !== document.getElementById('navPanel')) return;
+      const panel = document.getElementById('navPanel');
+      const menuBtn = document.getElementById('menuBtn');
+      panel.classList.remove('active');
+      menuBtn.classList.remove('active');
+      menuBtn.textContent = '☰';
+    }
+  </script>
+  <script src="i18n.js"></script>
+  <script src="config.js"></script>
+  <script>
+    // 初始化语言
+    document.addEventListener('DOMContentLoaded', function() {
+      i18n.init();
+    });
+    
+    // 语言切换函数
+    function toggleLang() {
+      i18n.toggleLang();
+    }
+  </script>
+</body>
+</html>
+<!-- Updated: 2026-03-01 19:30:00 CST -->
+<!-- Version: 2026-03-01-1930-i18n -->
