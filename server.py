@@ -99,8 +99,9 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         
         # Mobile 页面（默认）
         if self.path == '/' or self.path == '/index.html':
-            self._serve_file('mobile.html')
-            return
+            # 直接使用 SimpleHTTPRequestHandler 的方式
+            self.path = '/mobile.html'
+            return http.server.SimpleHTTPRequestHandler.do_GET(self)
         
         if self.path.startswith('/assets/'):
             self._serve_dashboard_file(self.path[1:])
