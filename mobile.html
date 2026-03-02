@@ -229,13 +229,6 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="otherSection">其他</div>
-        <a href="#" class="nav-link" id="dashboardLink">
-          <span class="icon">🎛️</span>
-          <div>
-            <div class="text" data-i18n="dashboard">Dashboard</div>
-            <div class="desc" data-i18n="dashboardDesc">完整控制面板 (18789)</div>
-          </div>
-        </a>
         <a href="javascript:void(0)" class="nav-link" onclick="clearHistory(); closeNav();">
           <span class="icon">🗑️</span>
           <div>
@@ -514,18 +507,6 @@
       document.getElementById('sessionKey').disabled = true; // 会话ID固定
       document.getElementById('sessionInfo').textContent = sessionKey;
       
-      // 设置 Dashboard 链接（从 WebSocket URL 转换）
-      const dashboardUrl = defaultWsUrl
-        .replace('ws://', 'http://')
-        .replace('wss://', 'https://')
-        .replace(/\/$/, ''); // 移除末尾斜杠
-      const dashboardLink = document.getElementById('dashboardLink');
-      if (dashboardLink) {
-        dashboardLink.href = dashboardUrl;
-        dashboardLink.target = '_blank';
-        console.log('Dashboard URL:', dashboardUrl);
-      }
-
       // 尝试自动登录
       if (!autoLogin()) {
         console.log('Auto-login skipped, showing login page');

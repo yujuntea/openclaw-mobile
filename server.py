@@ -97,9 +97,9 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self._handle_get_proxy()
             return
         
-        # Dashboard 静态文件
+        # Mobile 页面（默认）
         if self.path == '/' or self.path == '/index.html':
-            self._serve_dashboard_file('index.html')
+            self._serve_file('mobile.html')
             return
         
         if self.path.startswith('/assets/'):
