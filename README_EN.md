@@ -223,7 +223,7 @@ systemctl --user stop openclaw-web
 systemctl --user restart openclaw-web
 ```
 
-Access at `http://localhost:8080/mobile.html`
+Access at `http://localhost:8080/` (root path redirects to mobile page)
 
 ## WebSocket URL Detection
 

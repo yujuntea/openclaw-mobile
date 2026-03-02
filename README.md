@@ -243,8 +243,11 @@ systemctl --user restart openclaw-web
 ### 6. 访问界面
 
 打开浏览器访问：
-- 本地: `http://localhost:8080/mobile.html`
-- 内网: `http://<your-ip>:8080/mobile.html`
+- 本地: `http://localhost:8080/`
+- 内网: `http://<your-ip>:8080/`
+- 完整: `http://your-domain:8080/`
+
+> 💡 访问根路径 `/` 会自动跳转到 mobile 页面
 
 ## ⚙️ 配置
 
