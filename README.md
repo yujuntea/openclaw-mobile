@@ -62,7 +62,189 @@
 
 ## 🚀 快速开始
 
-### 1. 配置项目
+### 方式一：一键配置（推荐）
+
+```bash
+# 克隆项目
+git clone https://github.com/yujuntea/openclaw-mobile.git
+cd openclaw-mobile
+
+# 运行配置工具
+python3 setup.py
+
+# 按照提示完成配置即可
+```
+
+配置工具会自动：
+- ✅ 检测 Tailscale IP 和主机名
+- ✅ 获取 Gateway Token
+- ✅ 生成配置文件
+- ✅ 配置 systemd 服务
+- ✅ 更新 Gateway allowedOrigins
+
+---
+
+## 📖 一键配置使用向导
+
+### 配置流程
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    一键配置工具流程                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Step 1: 自动检测环境                                      │
+│  ├─ Tailscale IP (如 100.x.x.x)                     │
+│  ├─ Tailscale 主机名 (如 your-hostname)                        │
+│  └─ Gateway Token                                         │
+│                                                             │
+│  Step 2: AI 助手名称配置                                  │
+│  ├─ 助手名称（中文/英文）                                 │
+│  └─ 助手描述（中文/英文）                                 │
+│                                                             │
+│  Step 3: Tailscale 配置（可选）                           │
+│  └─ 如不需要，直接回车跳过                                │
+│                                                             │
+│  Step 3: 访问域名配置                                     │
+│  └─ 用于显示访问地址                                      │
+│                                                             │
+│  Step 4: 云端口转发配置（可选）                            │
+│  ├─ HTTP 访问域名                                         │
+│  └─ WSS WebSocket 地址                                    │
+│                                                             │
+│  Step 5: Gateway Token                                    │
+│  └─ 自动检测，如不正确可修改                              │
+│                                                             │
+│  Step 6: Dashboard 目录                                   │
+│  └─ 自动检测，默认值即可                                   │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3 种访问方式组合
+
+| 方式 | 场景 | 配置说明 |
+|------|------|----------|
+| **方式1** | 仅 Tailscale | 输入 Tailscale IP 和主机名，云转发直接回车跳过 |
+| **方式2** | 仅云转发 | Tailscale 直接回车跳过，输入云转发域名和WSS地址 |
+| **方式3** | 自定义域名 | Tailscale 和云转发都跳过，输入自定义域名 |
+| **组合** | 全部开启 | 输入所有信息，同时支持 Tailscale + 云转发 + 自定义域名 |
+
+### 配置决策表
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    BIND_HOST 决策逻辑                        │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  有 Tailscale IP？                                          │
+│       │                                                     │
+│       ├── 是 → BIND_HOST = Tailscale IP                    │
+│       │         (仅 Tailscale 网络可访问，更安全)            │
+│       │                                                     │
+│       └── 否 → BIND_HOST = 0.0.0.0                         │
+│                 (所有网络可访问，需防火墙)                   │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 使用示例
+
+**示例1: 仅使用 Tailscale 访问**
+```
+📋 Tailscale 配置
+  检测到 Tailscale IP: 100.x.x.x
+  Tailscale IP [100.x.x.x]: (直接回车使用检测值)
+  Tailscale 主机名 [your-hostname]: (直接回车使用检测值)
+
+📋 访问域名配置
+  访问域名（用于显示） [your-hostname.tailXXXX.ts.net]: (直接回车使用默认值)
+
+📋 云端口转发配置（可选）
+  云转发 HTTP 访问域名：(直接回车跳过)
+  云转发 WSS 地址: (直接回车跳过)
+
+📋 Gateway 配置
+  Gateway Token [自动检测到]: (直接回车使用)
+```
+
+**示例2: 仅使用云端口转发**
+```
+📋 Tailscale 配置
+  Tailscale IP [直接回车跳过]: (直接回车跳过)
+  Tailscale 主机名 [直接回车跳过]: (直接回车跳过)
+
+📋 访问域名配置
+  访问域名（用于显示） [直接回车跳过]: (直接回车跳过)
+
+📋 云端口转发配置
+  云转发 HTTP 访问域名: demo.orcaterm.cloud.tencent.com
+  云转发 WSS 地址: wss://wss-demo.orcaterm.cloud.tencent.com/
+```
+
+**示例 3: 同时使用 Tailscale + 云转发**
+```
+📋 Tailscale 配置
+  检测到 Tailscale IP: 100.x.x.x
+  检测到主机名：your-hostname
+  
+  Tailscale IP [100.x.x.x]: (直接回车使用检测值)
+  Tailscale 主机名 [your-hostname]: (直接回车使用检测值)
+
+📋 访问域名配置
+  访问域名（用于显示） [your-hostname.tailXXXX.ts.net]: (直接回车使用默认值)
+
+📋 云转发配置
+  云转发 HTTP 访问域名：demo.orcaterm.cloud.tencent.com
+  云转发 WSS 地址：wss://wss-demo.orcaterm.cloud.tencent.com/
+
+📋 Gateway 配置
+  Gateway Token [自动检测到]: (直接回车使用)
+```
+
+### 访问地址自动添加
+
+配置工具会自动将以下地址添加到 Gateway 的 `allowedOrigins`：
+
+| 访问方式 | 地址示例 |
+|----------|------|
+| 本地 | http://localhost:8080 |
+| Tailscale IP | http://100.x.x.x:8080 |
+| Tailscale 域名 | http://your-hostname.tailXXXX.ts.net:8080 |
+| 云转发域名 | http://demo.orcaterm.cloud.tencent.com |
+
+### 配置文件说明
+
+| 文件 | 说明 | 位置 |
+|------|------|------|
+| `config.js` | 前端配置 | 项目目录上级 |
+| `server_config.py` | 后端配置 | 项目目录上级 |
+| `openclaw-web.service` | Systemd 服务 | ~/.config/systemd/user/ |
+
+### 常见问题
+
+**Q: 配置会备份吗？**
+> A: 是的！运行 setup.py 会自动备份现有配置文件到：
+> - 备份位置：`项目目录/../config-backup/`（即 workspace/config-backup/）
+> - 文件：`config.js.日期时间`、`server_config.py.日期时间`、`openclaw.json.日期时间`
+
+**Q: 配置后需要重启 Gateway 吗？**
+> A: 是的，配置工具会提示你运行：
+> ```bash
+> systemctl --user restart openclaw-gateway
+> ```
+
+**Q: 想修改配置怎么办？**
+> A: 重新运行 `python3 setup.py` 即可重新配置
+
+**Q: BIND_HOST 绑定 Tailscale IP 有什么好处？**
+> A: 更安全！只有 Tailscale 网络内的设备才能访问服务
+
+---
+
+### 方式二：手动配置
+
+#### 1. 配置项目
 
 ```bash
 # 克隆项目
@@ -82,7 +264,7 @@ vim ../config.js
 vim ../server_config.py
 ```
 
-### 2. 前端配置 (config.js)
+#### 2. 前端配置 (config.js)
 
 ```javascript
 const OPENCLAW_CONFIG = {
@@ -173,7 +355,7 @@ python3 server.py
 **方式 1：nohup**
 
 ```bash
-cd /root/.openclaw/workspace
+cd /path/to/workspace
 nohup python3 server.py > server.log 2>&1 &
 
 # 查看日志
@@ -199,8 +381,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/root/.openclaw/workspace
-ExecStart=/usr/bin/python3 /root/.openclaw/workspace/server.py
+WorkingDirectory=/path/to/workspace
+ExecStart=/usr/bin/python3 /path/to/workspace/server.py
 Restart=on-failure
 RestartSec=5
 

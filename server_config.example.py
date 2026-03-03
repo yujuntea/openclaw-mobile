@@ -44,14 +44,15 @@ GATEWAY_HTTP = 'http://127.0.0.1:18789'
 import os
 
 # 工作目录
-WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 修改为你的 OpenClaw workspace 路径
+WORKSPACE_DIR = '/path/to/openclaw/workspace'
 
 # Dashboard 目录（OpenClaw 安装目录）
 # 修改为你的 OpenClaw 安装路径
 DASHBOARD_DIR = '/path/to/openclaw/dist/control-ui'
 
 # 媒体目录
-MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media')
+MEDIA_DIR = os.path.join(WORKSPACE_DIR, 'media')
 
 # 入站文件目录
 INBOUND_DIR = os.path.join(MEDIA_DIR, 'inbound')

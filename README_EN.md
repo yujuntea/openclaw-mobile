@@ -54,6 +54,199 @@ A modern, feature-rich mobile web interface for OpenClaw Gateway that provides s
 
 ## Quick Start
 
+### Option 1: One-Click Setup (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/yujuntea/openclaw-mobile.git
+cd openclaw-mobile
+
+# Run setup tool
+python3 setup.py
+
+# Follow the prompts to complete configuration
+```
+
+The setup tool will automatically:
+- ✅ Detect Tailscale IP and hostname
+- ✅ Get Gateway Token
+- ✅ Generate config files
+- ✅ Configure systemd service
+- ✅ Update Gateway allowedOrigins
+
+---
+
+## 📖 Setup Tool Guide
+
+### Configuration Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  Setup Tool Flow                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Step 1: Auto-detect environment                           │
+│  ├─ Tailscale IP (e.g., 100.x.x.x)                       │
+│  ├─ Tailscale hostname (e.g., your-hostname)             │
+│  └─ Gateway Token                                          │
+│                                                             │
+│  Step 3: Tailscale config (optional)                      │
+│  └─ Press Enter to skip if not needed                      │
+│                                                             │
+│  Step 4: Access domain config                              │
+│  └─ Used for displaying access address                     │
+│                                                             │
+│  Step 5: Cloud port forwarding config (optional)           │
+│  ├─ HTTP access domain                                     │
+│  └─ WSS WebSocket address                                  │
+│                                                             │
+│  Step 6: Gateway Token                                     │
+│  └─ Auto-detected, modify if needed                        │
+│                                                             │
+│  Step 7: Dashboard directory                               │
+│  └─ Auto-detected, press Enter to use default             │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3 Access Mode Combinations
+
+| Mode | Scenario | Configuration |
+|------|----------|---------------|
+| **Mode 1** | Tailscale only | Enter Tailscale IP/hostname, skip cloud |
+| **Mode 2** | Cloud forwarding only | Skip Tailscale, enter cloud domain/WSS |
+| **Mode 3** | Custom domain | Skip both, enter custom domain |
+| **Combo** | All enabled | Enter all, supports Tailscale + Cloud + Custom |
+
+### BIND_HOST Decision Logic
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  BIND_HOST Decision Logic                   │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Have Tailscale IP?                                        │
+│       │                                                     │
+│       ├── Yes → BIND_HOST = Tailscale IP                  │
+│       │         (Only accessible via Tailscale, safer)     │
+│       │                                                     │
+│       └── No → BIND_HOST = 0.0.0.0                        │
+│                 (Accessible from all networks, needs FW)    │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Usage Examples
+
+**Example 0: Customize AI Assistant Name**
+```
+📋 AI Assistant Name Config
+  Assistant name (Chinese) [小强 AI]: MyAI
+  Assistant name (English) [XiaoQiang AI]: MyAI
+  Assistant description (Chinese) [AI 家庭助手]: My personal AI
+  Assistant description (English) [AI Family Assistant]: My personal AI
+
+📋 Tailscale Config
+  (Continue with other configs...)
+```
+→ The generated config.js will use your custom names
+
+---
+
+**Example 1: Tailscale Only**
+```
+📋 Tailscale Config
+  Detected Tailscale IP: 100.x.x.x
+  Detected hostname: your-hostname
+  
+  Tailscale IP [100.x.x.x]: (Press Enter to use detected value)
+  Tailscale hostname [your-hostname]: (Press Enter to use detected value)
+
+📋 Access Domain Config
+  Access domain [your-hostname.tailXXXX.ts.net]: (Press Enter to use default)
+
+📋 Cloud Port Forwarding (optional)
+  Cloud HTTP domain: (Press Enter to skip)
+  Cloud WSS address: (Press Enter to skip)
+
+📋 Gateway Config
+  Gateway Token [Auto-detected]: (Press Enter to use)
+```
+
+**Example 2: Cloud Forwarding Only**
+```
+📋 Tailscale Config
+  (No Tailscale detected)
+  Tailscale IP [Press Enter to skip]: (Press Enter to skip)
+  Tailscale hostname [Press Enter to skip]: (Press Enter to skip)
+
+📋 Access Domain Config
+  Access domain [Press Enter to skip]: (Press Enter to skip)
+
+📋 Cloud Port Forwarding Config
+  Cloud HTTP domain: demo.orcaterm.cloud.tencent.com
+  Cloud WSS address: wss://wss-demo.orcaterm.cloud.tencent.com/
+```
+
+**Example 3: Tailscale + Cloud Forwarding**
+```
+📋 Tailscale Config
+  Detected Tailscale IP: 100.x.x.x
+  Detected hostname: your-hostname
+  
+  Tailscale IP [100.x.x.x]: (Press Enter to use detected value)
+  Tailscale hostname [your-hostname]: (Press Enter to use detected value)
+
+📋 Access Domain Config
+  Access domain [your-hostname.tailXXXX.ts.net]: (Press Enter to use default)
+
+📋 Cloud Port Forwarding
+  Cloud HTTP domain: demo.orcaterm.cloud.tencent.com
+  Cloud WSS address: wss://wss-demo.orcaterm.cloud.tencent.com/
+
+📋 Gateway Config
+  Gateway Token [Auto-detected]: (Press Enter to use)
+```
+
+### Auto-Added Access Addresses
+
+The setup tool automatically adds these addresses to Gateway's `allowedOrigins`:
+
+| Access Mode | Example Address |
+|-------------|----------------|
+| Local | http://localhost:8080 |
+| Tailscale IP | http://100.x.x.x:8080 |
+| Tailscale domain | http://your-hostname.tailXXXX.ts.net:8080 |
+| Cloud domain | http://demo.orcaterm.cloud.tencent.com |
+
+### Config Files
+
+| File | Description | Location |
+|------|-------------|----------|
+| `config.js` | Frontend config | Project parent dir |
+| `server_config.py` | Backend config | Project parent dir |
+| `openclaw-web.service` | Systemd service | ~/.config/systemd/user/ |
+
+### FAQ
+
+**Q: Does setup backup existing configs?**
+> A: Yes! Running setup.py automatically backs up existing configs to:
+> - Backup location: `project-dir/../config-backup/` (i.e., workspace/config-backup/)
+> - Files: `config.js.datetime`, `server_config.py.datetime`, `openclaw.json.datetime`
+
+**Q: Need to restart Gateway after config?**
+> A: Yes, the tool will prompt you to run:
+> ```bash
+> systemctl --user restart openclaw-gateway
+> ```
+
+**Q: How to modify config?**
+> A: Simply run `python3 setup.py` again to reconfigure
+
+---
+
+### Option 2: Manual Configuration
+
 ### 1. Configuration
 
 ```bash
