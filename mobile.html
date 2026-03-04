@@ -489,9 +489,14 @@
       let defaultWsUrl;
       if (window.getWebSocketUrl) {
         defaultWsUrl = window.getWebSocketUrl();
+      } else if (window.OPENCLAW_CONFIG?.gateway?.defaultWsUrl) {
+        defaultWsUrl = window.OPENCLAW_CONFIG.gateway.defaultWsUrl;
       } else {
-        // 兜底：使用配置文件中的默认值
-        defaultWsUrl = window.OPENCLAW_CONFIG?.gateway?.defaultWsUrl || 'ws://localhost:18789/';
+        // 动态构建 WebSocket URL（基于当前访问地址）
+        const wsProtocol = currentProtocol === 'https:' ? 'wss:' : 'ws:';
+        // 如果是 Tailscale 域名或 IP，使用 18789 端口
+        defaultWsUrl = `${wsProtocol}//${currentHost}:18789/`;
+        console.log('Dynamic WebSocket URL:', defaultWsUrl);
       }
       
       document.getElementById('wsUrlInput').value = defaultWsUrl;

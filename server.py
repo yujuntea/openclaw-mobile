@@ -504,9 +504,19 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
                 '.gif': 'image/gif', '.webp': 'image/webp',
                 '.mp4': 'video/mp4', '.webm': 'video/webm',
                 '.pdf': 'application/pdf',
-                '.txt': 'text/plain', '.md': 'text/markdown',
-                '.json': 'application/json', '.xml': 'application/xml',
-                '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
+                '.txt': 'text/plain; charset=utf-8',
+                '.md': 'text/markdown; charset=utf-8',
+                '.json': 'application/json; charset=utf-8',
+                '.xml': 'application/xml; charset=utf-8',
+                '.html': 'text/html; charset=utf-8',
+                '.css': 'text/css; charset=utf-8',
+                '.js': 'application/javascript; charset=utf-8',
+                '.py': 'text/x-python; charset=utf-8',
+                '.sh': 'text/x-sh; charset=utf-8',
+                '.yml': 'text/yaml; charset=utf-8',
+                '.yaml': 'text/yaml; charset=utf-8',
+                '.log': 'text/plain; charset=utf-8',
+                '.csv': 'text/csv; charset=utf-8',
             }
             ext = os.path.splitext(filepath)[1].lower()
             mime_type = mime_types.get(ext, 'application/octet-stream')
