@@ -21,10 +21,11 @@ import re
 import html as html_module
 
 # 添加配置文件搜索路径
+# 注意：敏感配置文件（server_config.py）只在 workspace 目录下
+# 非敏感文件（i18n.js, mobile.html 等）从脚本目录提供
 _config_paths = [
-    os.path.dirname(os.path.realpath(__file__)),  # 脚本所在目录
-    os.path.dirname(os.path.realpath(__file__)),  # workspace 目录（如果是符号链接）
-    '/root/.openclaw/workspace',  # 默认 workspace 目录
+    '/root/.openclaw/workspace',  # workspace 目录（配置文件位置）
+    os.path.dirname(os.path.realpath(__file__)),  # 脚本所在目录 (openclaw-mobile-release)
 ]
 for _path in _config_paths:
     if _path not in sys.path:
