@@ -69,9 +69,12 @@
     .msg.user .av { background: var(--accent); }
     
     .msg-content { flex: 1; min-width: 0; }
-    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
+    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; position: relative; }
     .msg.ai .bubble { background: var(--bg3); border-top-left-radius: 6px; }
     .msg.user .bubble { background: var(--accent); border-top-right-radius: 6px; }
+    .tts-btn { background: var(--bg4); border: none; border-radius: 12px; padding: 6px 12px; color: var(--accent); cursor: pointer; font-size: 13px; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
+    .tts-btn:active { transform: scale(0.95); background: var(--bg3); }
+    .tts-btn.speaking { background: var(--red); color: #fff; }
     
     .time { font-size: 10px; color: var(--text2); margin-top: 4px; opacity: .7; }
     .msg.user .time { text-align: right; }
@@ -110,6 +113,15 @@
     @keyframes workIndicator { 0%,100%{transform: scale(1)} 50%{transform: scale(1.05)} }
     .work-indicator::before { content: '⚡'; }
     
+    /* TTS 播放指示器 */
+    .tts-indicator { position: fixed; top: calc(var(--safe-top) + 8px); left: 12px; background: var(--green); color: #fff; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; display: none; align-items: center; gap: 6px; z-index: 1000; box-shadow: 0 2px 10px rgba(48,209,88,0.4); animation: ttsPulse 1.5s infinite; }
+    .tts-indicator.active { display: flex; }
+    @keyframes ttsPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+    .tts-indicator::before { content: '🔊'; }
+    
+    /* TTS 按钮激活状态 */
+    .header-btn.active { background: var(--green); color: #fff; }
+    
     /* 流式输出 */
     .streaming { border-left-color: var(--accent); }
     .streaming .thinking-icon { animation: pulse 1s infinite; }
@@ -134,6 +146,18 @@
     .img-preview img { max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid var(--bg4); }
     .img-preview .img-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); border: none; color: #fff; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
     .img-preview .img-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
+    
+    /* 文件预览 */
+    .file-preview { width: 100%; padding: 8px 0; }
+    .file-preview.has-file { display: flex; align-items: center; gap: 8px; }
+    .file-preview .file-list { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .file-preview .file-item { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg3); border-radius: 8px; border: 1px solid var(--bg4); }
+    .file-preview .file-icon { font-size: 20px; }
+    .file-preview .file-info { display: flex; flex-direction: column; }
+    .file-preview .file-name { font-size: 13px; color: var(--text); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-preview .file-size { font-size: 11px; color: var(--text2); }
+    .file-preview .file-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); border: none; color: #fff; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+    .file-preview .file-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
     
     .login { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; z-index: 200; }
     .login-emoji { font-size: 64px; margin-bottom: 16px; }
@@ -167,21 +191,30 @@
       <div class="header-center" id="headerTitle">🤖 <span data-i18n="appName">小强 AI</span></div>
       <div class="header-right">
         <button class="header-btn" id="refreshBtn" onclick="refreshHistory()" data-i18n-title="refreshBtn" title="刷新消息">🔄</button>
+        <button class="header-btn" id="ttsToggle" onclick="toggleAutoPlay()" title="自动朗读">🔊</button>
         <button class="lang-btn" id="langBtn" onclick="toggleLang()" title="切换语言">EN</button>
         <button class="header-btn" id="menuBtn" onclick="toggleNav()" data-i18n-title="menuBtn" title="菜单">☰</button>
       </div>
     </div>
     <!-- 工作状态指示器 -->
     <div class="work-indicator" id="workIndicator" data-i18n="working">工作中...</div>
+    <!-- TTS 播放指示器 -->
+    <div class="tts-indicator" id="ttsIndicator">朗读中...</div>
     <div class="chat" id="chatArea"></div>
     <div class="input-wrap">
       <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
+      <input type="file" id="fileInput" accept="*" onchange="handleFileSelect()" style="display:none">
       <button class="img-btn" onclick="document.getElementById('imgInput').click()" data-i18n-title="sendImageBtn" title="发送图片">📷</button>
+      <button class="img-btn" onclick="document.getElementById('fileInput').click()" data-i18n-title="sendFileBtn" title="发送文件">📎</button>
       <input type="text" class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息..." enterkeyhint="send">
       <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
       <div class="img-preview" id="imgPreview">
         <div class="img-list" id="imgList"></div>
         <div class="img-count" id="imgCount"></div>
+      </div>
+      <div class="file-preview" id="filePreview" style="display:none">
+        <div class="file-list" id="fileList"></div>
+        <div class="file-count" id="fileCount"></div>
       </div>
     </div>
   </div>
@@ -229,6 +262,27 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="otherSection">其他</div>
+        <a href="javascript:void(0)" class="nav-link" onclick="speakLastAIMessage(); closeNav();">
+          <span class="icon">🔊</span>
+          <div>
+            <div class="text">朗读最后回复</div>
+            <div class="desc">播放 AI 最后的回复</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="toggleAutoPlay();">
+          <span class="icon" id="ttsMenuIcon">🔇</span>
+          <div>
+            <div class="text" id="ttsMenuText">自动朗读：关闭</div>
+            <div class="desc">AI 回复后自动朗读</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="stopSpeak(); closeNav();">
+          <span class="icon">⏹️</span>
+          <div>
+            <div class="text">停止朗读</div>
+            <div class="desc">停止当前朗读</div>
+          </div>
+        </a>
         <a href="javascript:void(0)" class="nav-link" onclick="clearHistory(); closeNav();">
           <span class="icon">🗑️</span>
           <div>
@@ -248,6 +302,21 @@
   </div>
 
   <script>
+    // ========== 全局变量 ==========
+    // 强制使用 /api 代理和正确的session key（与Dashboard共享）
+    let gateway = '/api';
+    let authToken = ''; // 将在页面加载时从 config.js 初始化
+    let sessionKey = 'agent:main:main';
+    let selectedImages = []; // 存储选中的图片 [{file, base64, id}]
+    let selectedFiles = []; // 存储选中的文件 [{file, serverPath, id, name, size, type}]
+    let gwClient = null; // WebSocket 客户端
+    
+    // TTS 相关变量
+    let ttsEnabled = false;  // 是否启用自动朗读
+    let autoPlayEnabled = false;  // 是否启用自动播放
+    let currentUtterance = null;  // 当前正在播放的语音
+    let lastAIMessage = '';  // 最后一条 AI 消息
+    
     // ========== WebSocket 客户端实现 ==========
     class GatewayClient {
       constructor(url, token, sessionKey, onEvent, onConnect, onDisconnect) {
@@ -465,20 +534,25 @@
     }
     
     // ========== 应用逻辑 ==========
-    // 强制使用 /api 代理和正确的session key（与Dashboard共享）
-    let gateway = '/api';
-    let authToken = ''; // 将在页面加载时从 config.js 初始化
-    let sessionKey = 'agent:main:main';
-    let selectedImages = []; // 存储选中的图片 [{file, base64, id}]
-    let gwClient = null; // WebSocket 客户端
     
     // 页面加载时设置默认值
     window.addEventListener('load', function() {
+      console.log('[Mobile] Page loaded, initializing...');
+      console.log('[Mobile] config.js loaded? typeof window.getToken:', typeof window.getToken);
+      console.log('[Mobile] config.js loaded? typeof window.getWebSocketUrl:', typeof window.getWebSocketUrl);
+      console.log('[Mobile] OPENCLAW_CONFIG:', window.OPENCLAW_CONFIG ? 'defined' : 'undefined');
+      if (window.OPENCLAW_CONFIG) {
+        console.log('[Mobile] defaultToken:', window.OPENCLAW_CONFIG.gateway?.defaultToken?.substring(0, 10) + '...');
+        console.log('[Mobile] defaultWsUrl:', window.OPENCLAW_CONFIG.gateway?.defaultWsUrl);
+      }
+      
       // 从 config.js 获取 token（config.js 已在外部脚本加载）
       if (window.getToken) {
         authToken = window.getToken();
+        console.log('[Mobile] Got token from config.js:', authToken ? authToken.substring(0, 10) + '...' : 'empty');
       } else {
         authToken = localStorage.getItem('oc_token') || 'YOUR_GATEWAY_TOKEN_HERE';
+        console.log('[Mobile] getToken not available, using localStorage:', authToken ? authToken.substring(0, 10) + '...' : 'empty');
       }
       
       // 智能检测 WebSocket URL
@@ -500,21 +574,44 @@
       }
       
       document.getElementById('wsUrlInput').value = defaultWsUrl;
-      console.log('Default WebSocket URL:', defaultWsUrl);
-      console.log('Location hostname:', currentHost);
-      console.log('Location protocol:', currentProtocol);
+      console.log('[Mobile] WebSocket URL set:', defaultWsUrl);
+      console.log('[Mobile] Location hostname:', currentHost);
+      console.log('[Mobile] Location protocol:', currentProtocol);
       
       document.getElementById('urlInput').value = gateway;
       document.getElementById('urlInput').disabled = true; // 代理地址固定
+      console.log('[Mobile] Gateway set:', gateway);
+      
+      // 确保 authToken 有值（备用默认值）
+      if (!authToken || authToken === 'YOUR_GATEWAY_TOKEN_HERE') {
+        // 从 OPENCLAW_CONFIG 直接获取
+        if (window.OPENCLAW_CONFIG?.gateway?.defaultToken) {
+          authToken = window.OPENCLAW_CONFIG.gateway.defaultToken;
+          console.log('[Mobile] Using fallback token from OPENCLAW_CONFIG');
+        }
+      }
+      
       document.getElementById('tokenInput').value = authToken;
+      console.log('[Mobile] Token input value set:', document.getElementById('tokenInput').value ? document.getElementById('tokenInput').value.substring(0, 10) + '...' : 'empty');
       // tokenInput 可编辑，用户可以修改
+      
       document.getElementById('sessionKey').value = sessionKey;
       document.getElementById('sessionKey').disabled = true; // 会话ID固定
       document.getElementById('sessionInfo').textContent = sessionKey;
+      console.log('[Mobile] Session key set:', sessionKey);
+      
+      // 最终检查：确保所有输入框都有值
+      console.log('[Mobile] === Final check ===');
+      console.log('[Mobile] wsUrlInput value:', document.getElementById('wsUrlInput').value || 'EMPTY');
+      console.log('[Mobile] tokenInput value:', document.getElementById('tokenInput').value ? 'set' : 'EMPTY');
+      console.log('[Mobile] sessionKey value:', document.getElementById('sessionKey').value || 'EMPTY');
       
       // 尝试自动登录
       if (!autoLogin()) {
         console.log('Auto-login skipped, showing login page');
+        // 显示登录页面
+        document.getElementById('login').classList.remove('hidden');
+        document.getElementById('chat').classList.add('hidden');
       }
     });
 
@@ -1062,8 +1159,22 @@
           const currentText = bubble.dataset.rawText || '';
           const newText = currentText + text;
           bubble.dataset.rawText = newText;
-          bubble.innerHTML = fmt(newText);
+          bubble.innerHTML = fmt(newText) + '<button class="tts-btn" style="display:none;" onclick="toggleTTS(this)">🔊 朗读</button>';
           scrollToBottom();
+        }
+      }
+    }
+    
+    // 切换朗读/停止
+    function toggleTTS(btn) {
+      if (currentUtterance) {
+        // 正在朗读，停止
+        stopSpeak();
+      } else {
+        // 开始朗读
+        const text = btn.parentElement.dataset.rawText;
+        if (text) {
+          speakText(text);
         }
       }
     }
@@ -1082,11 +1193,35 @@
         // 保存到历史记录
         const bubble = document.querySelector('.msg.ai:last-child .bubble');
         if (bubble && bubble.dataset.rawText) {
+          const aiContent = bubble.dataset.rawText;
           saveMessageToHistory({ 
             role: 'assistant', 
-            content: bubble.dataset.rawText, 
+            content: aiContent, 
             timestamp: Date.now() 
           });
+          
+          // 保存最后一条 AI 消息
+          lastAIMessage = aiContent;
+          
+          // 显示朗读按钮
+          const ttsBtn = bubble.querySelector('.tts-btn');
+          if (ttsBtn) {
+            ttsBtn.style.display = 'inline-flex';
+          }
+          
+          // 如果启用了自动朗读，播放最后一条消息
+          // 注意：移动端可能需要用户交互才能播放
+          if (autoPlayEnabled && aiContent) {
+            console.log('[TTS] 自动朗读最后一条消息');
+            // 延迟一点，等待用户交互上下文
+            setTimeout(() => {
+              try {
+                speakText(aiContent, true);
+              } catch (e) {
+                console.log('[TTS] 自动朗读失败，移动端可能需要用户交互:', e);
+              }
+            }, 500);
+          }
         }
       }
     }
@@ -1108,7 +1243,8 @@
         if (aiMsg && message) {
           const content = extractContent(message);
           if (content) {
-            aiMsg.innerHTML = fmt(content);
+            aiMsg.dataset.rawText = content;
+            aiMsg.innerHTML = fmt(content) + '<button class="tts-btn" style="display:none;" onclick="toggleTTS(this)">🔊 朗读</button>';
             scrollToBottom();
           }
         }
@@ -1209,6 +1345,15 @@
           if (content && content !== '⏳ 响应完成') {
             saveMessageToHistory({ role: 'assistant', content: content, timestamp: Date.now() });
           }
+          
+          // 显示朗读按钮
+          const ttsBtn = aiMsg.querySelector('.tts-btn');
+          if (ttsBtn) {
+            ttsBtn.style.display = 'inline-flex';
+          }
+          
+          // 保存最后一条 AI 消息
+          lastAIMessage = aiMsg.dataset.rawText || content;
         }
         
         document.getElementById('sendBtn').disabled = false;
@@ -1308,9 +1453,10 @@
       const input = document.getElementById('msgInput');
       const content = input.value.trim();
       const imagesToSend = selectedImages.length > 0 ? [...selectedImages] : []; // 复制图片数组
+      const filesToSend = selectedFiles.length > 0 ? [...selectedFiles] : []; // 复制文件数组
       
-      // 检查是否有内容或图片
-      if (!content && imagesToSend.length === 0) return;
+      // 检查是否有内容、图片或文件
+      if (!content && imagesToSend.length === 0 && filesToSend.length === 0) return;
       
       // 检查 WebSocket 是否已连接
       if (!gwClient || !gwClient.authenticated) {
@@ -1319,9 +1465,10 @@
       }
 
       // 显示用户消息
-      if (imagesToSend.length > 0) {
-        const area = document.getElementById('chatArea');
-        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      const area = document.getElementById('chatArea');
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      
+      if (imagesToSend.length > 0 || filesToSend.length > 0) {
         const div = document.createElement('div');
         div.className = 'msg user';
         
@@ -1330,16 +1477,31 @@
         for (const img of imagesToSend) {
           imgHtml += '<img src="' + img.base64 + '" style="max-width: 150px; max-height: 150px; border-radius: 12px; margin: 4px; display: inline-block;">';
         }
+        
+        // 生成文件列表 HTML
+        let fileHtml = '';
+        for (const file of filesToSend) {
+          const icon = getFileIcon(file.name, file.type);
+          fileHtml += `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg3);border-radius:8px;margin:4px 0;">
+            <span style="font-size:20px">${icon}</span>
+            <div>
+              <div style="font-size:13px">${escapeHtml(file.name)}</div>
+              <div style="font-size:11px;color:var(--text2)">${formatFileSize(file.size)}</div>
+            </div>
+          </div>`;
+        }
+        
         let textHtml = content ? '<div>' + fmt(content) + '</div>' : '';
-        div.innerHTML = '<div class="av">👤</div><div class="bubble">' + imgHtml + textHtml + '<div class="time">' + time + '</div></div>';
+        div.innerHTML = '<div class="av">👤</div><div class="bubble">' + imgHtml + fileHtml + textHtml + '<div class="time">' + time + '</div></div>';
         area.appendChild(div);
         
-        // 保存用户消息到历史记录（包含多张图片）
+        // 保存用户消息到历史记录
         const userMsg = {
           role: 'user',
           content: [
-            { type: 'text', text: content || `请分析这${imagesToSend.length}张图片` },
-            ...imagesToSend.map(img => ({ type: 'image', url: img.base64 }))
+            ...(content ? [{ type: 'text', text: content }] : []),
+            ...imagesToSend.map(img => ({ type: 'image', url: img.base64 })),
+            ...filesToSend.map(file => ({ type: 'file', name: file.name, size: file.size, mimeType: file.type, path: file.serverPath }))
           ],
           timestamp: Date.now()
         };
@@ -1351,6 +1513,7 @@
       
       input.value = '';
       clearImages(); // 清除所有图片
+      clearFiles(); // 清除所有文件
       document.getElementById('sendBtn').disabled = true;
       scrollToBottom();
 
@@ -1367,26 +1530,55 @@
       try {
         // 通过 WebSocket 发送消息
         let attachments = [];
+        
+        // 处理图片
         if (imagesToSend.length > 0) {
-          // 处理所有图片 - 同时使用 base64 和服务器路径
           for (const imgToSend of imagesToSend) {
             if (imgToSend.base64 && imgToSend.base64.startsWith('data:')) {
-              // 提取 base64 数据
               const match = imgToSend.base64.match(/^data:(image\/[^;]+);base64,(.+)$/);
               if (match) {
                 attachments.push({ 
                   type: 'image', 
                   mimeType: match[1], 
-                  content: match[2],  // base64 数据
-                  path: imgToSend.serverPath  // 服务器路径（可选，供日志记录）
+                  content: match[2],
+                  path: imgToSend.serverPath
                 });
                 console.log('[DEBUG] 发送图片, 服务器路径:', imgToSend.serverPath);
               }
             }
           }
         }
-        console.log('[DEBUG] 发送图片数量:', imagesToSend.length, 'attachments:', attachments.length);
-        await gwClient.sendMessage(content || `请分析这${imagesToSend.length}张图片`, attachments);
+        
+        // 处理文件
+        if (filesToSend.length > 0) {
+          for (const fileToSend of filesToSend) {
+            // 读取文件内容
+            const fileContent = await readFileAsBase64(fileToSend.file);
+            const match = fileContent.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              attachments.push({
+                type: 'file',
+                mimeType: fileToSend.type || match[1],
+                content: match[2],
+                filename: fileToSend.name,
+                path: fileToSend.serverPath
+              });
+              console.log('[DEBUG] 发送文件:', fileToSend.name, '服务器路径:', fileToSend.serverPath);
+            }
+          }
+        }
+        
+        // 生成消息文本
+        let messageText = content;
+        if (imagesToSend.length > 0 && !content) {
+          messageText = `请分析这${imagesToSend.length}张图片`;
+        } else if (filesToSend.length > 0 && !content) {
+          const fileNames = filesToSend.map(f => f.name).join(', ');
+          messageText = `请分析以下文件：${fileNames}`;
+        }
+        
+        console.log('[DEBUG] 发送图片数量:', imagesToSend.length, '文件数量:', filesToSend.length, 'attachments:', attachments.length);
+        await gwClient.sendMessage(messageText, attachments);
         
         // 消息已发送，等待流式响应
         bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待响应...';
@@ -1645,6 +1837,175 @@
     // 移除已选择的图片
     function removeImg() { clearImages(); }
     
+    // ========== 文件选择处理 ==========
+    // selectedFiles 已在全局变量中声明
+    
+    // 文件图标映射
+    function getFileIcon(filename, mimeType) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const icons = {
+        'pdf': '📄', 'doc': '📝', 'docx': '📝', 'xls': '📊', 'xlsx': '📊',
+        'ppt': '📽️', 'pptx': '📽️', 'zip': '📦', 'tar': '📦', 'gz': '📦',
+        'txt': '📃', 'md': '📝', 'json': '📋', 'xml': '📋',
+        'js': '💻', 'ts': '💻', 'py': '🐍', 'sh': '⚡',
+        'html': '🌐', 'css': '🎨', 'csv': '📈', 'log': '📋',
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️',
+        'mp4': '🎬', 'webm': '🎬', 'mp3': '🎵', 'wav': '🎵',
+      };
+      return icons[ext] || '📎';
+    }
+    
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    // 处理文件选择
+    async function handleFileSelect() {
+      const input = document.getElementById('fileInput');
+      const files = Array.from(input.files);
+      if (files.length === 0) return;
+      
+      // 检查文件数量（最多 5 个）
+      if (selectedFiles.length + files.length > 5) {
+        alert('最多只能选择 5 个文件');
+        input.value = '';
+        return;
+      }
+      
+      // 检查文件大小 (最大 50MB)
+      for (const file of files) {
+        if (file.size > 50 * 1024 * 1024) {
+          alert('文件大小不能超过 50MB: ' + file.name);
+          input.value = '';
+          return;
+        }
+      }
+      
+      // 显示上传指示器
+      showWorkIndicator(true, '📤 上传文件...');
+      
+      // 处理每个文件
+      for (const file of files) {
+        try {
+          // 读取文件为 base64
+          const fileBase64 = await readFileAsBase64(file);
+          
+          // 上传到服务器
+          const serverPath = await uploadFile(fileBase64, file.name, file.type);
+          
+          // 添加到已选择列表
+          const id = Date.now() + Math.random();
+          selectedFiles.push({ 
+            file, 
+            serverPath,
+            id,
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+          
+          console.log('[DEBUG] 文件上传成功:', serverPath);
+        } catch (err) {
+          console.error('文件上传失败:', err);
+          alert('文件上传失败: ' + err.message);
+        }
+      }
+      
+      // 隐藏上传指示器
+      showWorkIndicator(false);
+      
+      // 更新预览
+      updateFilePreview();
+      
+      // 清空 input，允许重复选择同一文件
+      input.value = '';
+    }
+    
+    // 读取文件为 base64
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          resolve(e.target.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    // 上传文件到服务器
+    async function uploadFile(fileBase64, filename, mimeType) {
+      const response = await fetch(window.location.origin + '/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          file: fileBase64, 
+          filename: filename,
+          mimeType: mimeType
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('上传失败: ' + response.status);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || '上传失败');
+      }
+      
+      return data.path;  // 返回服务器保存路径
+    }
+    
+    // 更新文件预览
+    function updateFilePreview() {
+      const preview = document.getElementById('filePreview');
+      const fileList = document.getElementById('fileList');
+      const fileCount = document.getElementById('fileCount');
+      
+      if (selectedFiles.length === 0) {
+        preview.style.display = 'none';
+        fileList.innerHTML = '';
+        fileCount.textContent = '';
+        return;
+      }
+      
+      preview.style.display = 'flex';
+      preview.classList.add('has-file');
+      
+      // 生成预览 HTML
+      fileList.innerHTML = selectedFiles.map((item, index) => `
+        <div class="file-item">
+          <span class="file-icon">${getFileIcon(item.name, item.type)}</span>
+          <div class="file-info">
+            <span class="file-name">${escapeHtml(item.name)}</span>
+            <span class="file-size">${formatFileSize(item.size)}</span>
+          </div>
+          <button class="file-remove" onclick="removeFile(${item.id})" title="移除">×</button>
+        </div>
+      `).join('');
+      
+      // 显示数量
+      fileCount.textContent = `${selectedFiles.length}个文件`;
+    }
+    
+    // 移除单个文件
+    function removeFile(id) {
+      selectedFiles = selectedFiles.filter(item => item.id !== id);
+      updateFilePreview();
+    }
+    
+    // 清空所有文件
+    function clearFiles() {
+      selectedFiles = [];
+      updateFilePreview();
+    }
+    
     // ========== 导航面板 ==========
     function toggleNav() {
       const panel = document.getElementById('navPanel');
@@ -1668,6 +2029,181 @@
       menuBtn.classList.remove('active');
       menuBtn.textContent = '☰';
     }
+    
+    // ========== 文字转语音 (TTS) ==========
+    
+    // 初始化 TTS
+    function initTTS() {
+      if ('speechSynthesis' in window) {
+        console.log('[TTS] Web Speech API 已支持');
+        return true;
+      } else {
+        console.log('[TTS] Web Speech API 不支持');
+        return false;
+      }
+    }
+    
+    // 朗读文本
+    function speakText(text, auto = false) {
+      if (!('speechSynthesis' in window)) {
+        alert('您的浏览器不支持语音合成');
+        return false;
+      }
+      
+      // 停止当前播放
+      if (currentUtterance) {
+        window.speechSynthesis.cancel();
+      }
+      
+      // 清理文本（移除 Markdown 格式）
+      const cleanText = text
+        .replace(/```[\s\S]*?```/g, '')  // 移除代码块
+        .replace(/`[^`]+`/g, '')  // 移除行内代码
+        .replace(/\*\*([^*]+)\*\*/g, '$1')  // 移除加粗
+        .replace(/\*([^*]+)\*/g, '$1')  // 移除斜体
+        .replace(/#{1,6}\s+/g, '')  // 移除标题
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // 移除链接，保留文本
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')  // 移除图片
+        .replace(/^\s*[-*+]\s+/gm, '')  // 移除列表标记
+        .replace(/^\s*\d+\.\s+/gm, '')  // 移除数字列表
+        .replace(/\n+/g, '。')  // 换行替换为句号
+        .replace(/\s+/g, ' ')  // 合并空格
+        .trim();
+      
+      if (!cleanText) {
+        return false;
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'zh-CN';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      // 获取可用语音
+      const voices = window.speechSynthesis.getVoices();
+      let zhVoice = voices.find(v => v.lang.includes('zh'));
+      if (zhVoice) {
+        utterance.voice = zhVoice;
+      } else {
+        utterance.lang = 'en-US';
+      }
+      
+      utterance.onstart = () => {
+        showTTSSpeaking(true);
+        updateTTSButtonState(true);
+      };
+      
+      utterance.onend = () => {
+        currentUtterance = null;
+        showTTSSpeaking(false);
+        updateTTSButtonState(false);
+      };
+      
+      utterance.onerror = (e) => {
+        currentUtterance = null;
+        showTTSSpeaking(false);
+        updateTTSButtonState(false);
+      };
+      
+      currentUtterance = utterance;
+      window.speechSynthesis.speak(utterance);
+      return true;
+    }
+    
+    // 停止朗读
+    function stopSpeak() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        currentUtterance = null;
+        showTTSSpeaking(false);
+        updateTTSButtonState(false);
+      }
+    }
+    
+    // 更新 TTS 按钮状态
+    function updateTTSButtonState(isSpeaking) {
+      // 更新所有朗读按钮
+      const ttsBtns = document.querySelectorAll('.tts-btn');
+      ttsBtns.forEach(btn => {
+        if (isSpeaking) {
+          btn.textContent = '⏹️ 停止';
+          btn.classList.add('speaking');
+        } else {
+          btn.textContent = '🔊 朗读';
+          btn.classList.remove('speaking');
+        }
+      });
+    }
+    
+    // 朗读最后一条 AI 消息
+    function speakLastAIMessage() {
+      if (lastAIMessage) {
+        speakText(lastAIMessage);
+      } else {
+        // 尝试从 DOM 获取最后一条 AI 消息
+        const lastBubble = document.querySelector('.msg.ai:last-child .bubble');
+        if (lastBubble) {
+          const text = lastBubble.textContent || lastBubble.innerText;
+          speakText(text);
+        }
+      }
+    }
+    
+    // 显示/隐藏 TTS 播放状态
+    function showTTSSpeaking(speaking) {
+      const indicator = document.getElementById('ttsIndicator');
+      if (indicator) {
+        indicator.style.display = speaking ? 'flex' : 'none';
+      }
+    }
+    
+    // 切换自动朗读
+    function toggleAutoPlay() {
+      autoPlayEnabled = !autoPlayEnabled;
+      localStorage.setItem('tts_autoPlay', autoPlayEnabled);
+      updateTTSButton();
+      console.log('[TTS] 自动朗读:', autoPlayEnabled ? '开启' : '关闭');
+    }
+    
+    // 更新 TTS 按钮状态
+    function updateTTSButton() {
+      const btn = document.getElementById('ttsToggle');
+      const menuIcon = document.getElementById('ttsMenuIcon');
+      const menuText = document.getElementById('ttsMenuText');
+      
+      if (btn) {
+        btn.classList.toggle('active', autoPlayEnabled);
+        btn.title = autoPlayEnabled ? '自动朗读已开启' : '自动朗读已关闭';
+        btn.textContent = autoPlayEnabled ? '🔊' : '🔇';
+      }
+      
+      if (menuIcon) {
+        menuIcon.textContent = autoPlayEnabled ? '🔊' : '🔇';
+      }
+      
+      if (menuText) {
+        menuText.textContent = autoPlayEnabled ? '自动朗读：开启' : '自动朗读：关闭';
+      }
+    }
+    
+    // 页面加载时初始化 TTS
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化 TTS
+      initTTS();
+      
+      // 恢复自动朗读设置
+      autoPlayEnabled = localStorage.getItem('tts_autoPlay') === 'true';
+      updateTTSButton();
+      
+      // 预加载语音列表
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+    });
   </script>
   <script src="i18n.js"></script>
   <script src="config.js"></script>

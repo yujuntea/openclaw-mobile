@@ -97,20 +97,6 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self._handle_get_proxy()
             return
         
-        # Mobile 页面（默认）
-        if self.path == '/' or self.path == '/index.html':
-            # 直接使用 SimpleHTTPRequestHandler 的方式
-            self.path = '/mobile.html'
-            return http.server.SimpleHTTPRequestHandler.do_GET(self)
-        
-        if self.path.startswith('/assets/'):
-            self._serve_dashboard_file(self.path[1:])
-            return
-        
-        if self.path in ['/favicon.svg', '/favicon-32.png', '/favicon.ico', '/apple-touch-icon.png']:
-            self._serve_dashboard_file(self.path[1:])
-            return
-        
         # Media 文件服务
         if self.path.startswith('/media/'):
             self._serve_media_file(self.path[7:])
@@ -121,7 +107,65 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self._serve_directory_listing(self.path[8:])
             return
         
-        # 其他静态文件（mobile.html 等）
+        # Dashboard 静态文件
+        if self.path.startswith('/assets/'):
+            self._serve_dashboard_file(self.path[1:])
+            return
+        
+        if self.path in ['/favicon.svg', '/favicon-32.png', '/favicon.ico', '/apple-touch-icon.png']:
+            self._serve_dashboard_file(self.path[1:])
+            return
+
+        # Mobile 相关静态文件（从 openclaw-mobile-release 目录提供）
+        # 注意：必须包含 '/' 和 '/index.html' 的重定向
+        request_path = self.path
+        if request_path == '/' or request_path == '/index.html':
+            request_path = '/mobile.html'
+        
+        mobile_files = ['/mobile.html', '/config.js', '/i18n.js']
+        if request_path in mobile_files or request_path.startswith('/screenshots/'):
+            # 直接调用 _serve_mobile_file
+            relative_path = request_path[1:]  # 去掉开头的 /
+            
+            # config.js 从 WORKSPACE_DIR 提供，其他文件从脚本目录提供
+            if relative_path == 'config.js':
+                filepath = os.path.join(WORKSPACE_DIR, relative_path)
+                self.log_message("[Config] Serving config.js from WORKSPACE_DIR: %s", filepath)
+            else:
+                mobile_dir = os.path.dirname(os.path.realpath(__file__))
+                filepath = os.path.join(mobile_dir, relative_path)
+            
+            if os.path.exists(filepath):
+                mime_types = {
+                    '.html': 'text/html; charset=utf-8',
+                    '.js': 'application/javascript; charset=utf-8',
+                    '.css': 'text/css',
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.svg': 'image/svg+xml',
+                    '.ico': 'image/x-icon',
+                }
+                ext = os.path.splitext(relative_path)[1].lower()
+                mime_type = mime_types.get(ext, 'application/octet-stream')
+                
+                with open(filepath, 'rb') as f:
+                    content = f.read()
+                
+                self.send_response(200)
+                self.send_header("Content-Type", mime_type)
+                self.send_header("Content-Length", len(content))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Pragma", "no-cache")
+                self.send_header("Expires", "0")
+                self.end_headers()
+                self.wfile.write(content)
+                return
+            else:
+                self.send_error(404, "File not found")
+                return
+
+        # 其他静态文件
         return http.server.SimpleHTTPRequestHandler.do_GET(self)
     
     def do_POST(self):
@@ -177,6 +221,53 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             
         except Exception as e:
             self.log_message("Dashboard file error: %s", str(e))
+            self.send_error(500, str(e))
+    
+    def _serve_mobile_file(self, relative_path):
+        """提供 Mobile 页面相关静态文件（从 openclaw-mobile-release 目录）"""
+        try:
+            # 计算 openclaw-mobile-release 目录路径
+            mobile_dir = os.path.dirname(os.path.realpath(__file__))
+            filepath = os.path.join(mobile_dir, relative_path)
+            
+            if not os.path.exists(filepath):
+                self.send_error(404, "File not found")
+                return
+            
+            # 安全检查：确保文件在 mobile_dir 内
+            if not os.path.abspath(filepath).startswith(os.path.abspath(mobile_dir)):
+                self.send_error(403, "Forbidden")
+                return
+            
+            # 确定 MIME 类型
+            mime_types = {
+                '.html': 'text/html; charset=utf-8',
+                '.js': 'application/javascript; charset=utf-8',
+                '.css': 'text/css',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.svg': 'image/svg+xml',
+                '.ico': 'image/x-icon',
+            }
+            ext = os.path.splitext(relative_path)[1].lower()
+            mime_type = mime_types.get(ext, 'application/octet-stream')
+            
+            with open(filepath, 'rb') as f:
+                content = f.read()
+            
+            self.send_response(200)
+            self.send_header("Content-Type", mime_type)
+            self.send_header("Content-Length", len(content))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            # 禁止缓存，确保用户总是获取最新版本
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            self.end_headers()
+            self.wfile.write(content)
+            
+        except Exception as e:
+            self.log_message("Mobile file error: %s", str(e))
             self.send_error(500, str(e))
     
     def _serve_media_file(self, relative_path):
@@ -400,10 +491,15 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             icon = '📁' if item['is_dir'] else self._get_file_icon(item['name'])
             size_str = self._format_size(item['size']) if not item['is_dir'] else '-'
             
-            # 图片预览
+            # 图片预览 - 使用正确的路径
             preview = ''
             if not item['is_dir'] and item['name'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
-                img_path = f"/media/{sub_path}/{item['name']}" if sub_path else f"/media/{item['name']}"
+                # 根据目录类型构建正确的图片路径
+                if dir_name == 'media':
+                    img_path = f"/media/{sub_path}/{item['name']}" if sub_path else f"/media/{item['name']}"
+                else:
+                    # 对于 workspace 等其他目录，使用 browse 路径
+                    img_path = f"/browse/{dir_name}/{sub_path}/{item['name']}" if sub_path else f"/browse/{dir_name}/{item['name']}"
                 preview = f'''<img src="{img_path}" class="preview" onclick="showImage(this.src)" alt="{item['name']}">'''
             
             items_html += f'''<tr>
@@ -570,7 +666,7 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self._send_json_response(502, {"error": str(e)})
     
     def _handle_upload(self, content_length):
-        """处理图片上传"""
+        """处理文件上传（支持图片和任意文件）"""
         try:
             content_type = self.headers.get('Content-Type', '')
             
@@ -581,6 +677,7 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
                 if match:
                     img_data = base64.b64decode(match.group(2))
                     ext = match.group(1).decode()
+                    filename = f"{uuid.uuid4()}.{ext}"
                 else:
                     self._send_json_response(400, {"error": "No image data found"})
                     return
@@ -589,31 +686,86 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
                 body = self.rfile.read(content_length)
                 data = json.loads(body)
                 
-                img_data = None
-                ext = 'jpg'
+                file_data = None
+                filename = None
+                original_name = None
+                mime_type = None
                 
-                if 'image' in data:
+                # 支持两种格式：
+                # 1. { "image": "data:image/png;base64,..." } - 旧格式（图片）
+                # 2. { "file": "data:application/pdf;base64,...", "filename": "doc.pdf" } - 新格式（任意文件）
+                
+                if 'file' in data:
+                    # 新格式：任意文件
+                    file_base64 = data['file']
+                    original_name = data.get('filename', 'unknown')
+                    mime_type = data.get('mimeType', 'application/octet-stream')
+                    
+                    if ',' in file_base64:
+                        # data:xxx;base64,yyy 格式
+                        header, file_base64 = file_base64.split(',', 1)
+                        # 从 header 提取 mime type
+                        if ':' in header and ';' in header:
+                            mime_type = header.split(':')[1].split(';')[0]
+                    
+                    file_data = base64.b64decode(file_base64)
+                    
+                    # 确定文件扩展名
+                    ext_map = {
+                        'application/pdf': 'pdf',
+                        'application/msword': 'doc',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+                        'application/vnd.ms-excel': 'xls',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+                        'application/vnd.ms-powerpoint': 'ppt',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+                        'application/zip': 'zip',
+                        'application/x-tar': 'tar',
+                        'application/gzip': 'gz',
+                        'text/plain': 'txt',
+                        'text/markdown': 'md',
+                        'text/csv': 'csv',
+                        'application/json': 'json',
+                        'application/xml': 'xml',
+                        'text/html': 'html',
+                        'text/css': 'css',
+                        'application/javascript': 'js',
+                        'text/x-python': 'py',
+                        'text/x-sh': 'sh',
+                    }
+                    ext = ext_map.get(mime_type, original_name.rsplit('.', 1)[-1] if '.' in original_name else 'bin')
+                    filename = f"{uuid.uuid4()}.{ext}"
+                    
+                elif 'image' in data:
+                    # 旧格式：图片
                     img_base64 = data['image']
                     if ',' in img_base64:
                         img_base64 = img_base64.split(',')[1]
-                    img_data = base64.b64decode(img_base64)
+                    file_data = base64.b64decode(img_base64)
+                    filename = f"{uuid.uuid4()}.jpg"
+                    mime_type = 'image/jpeg'
+                    original_name = filename
                 
-                if not img_data:
-                    self._send_json_response(400, {"error": "No image data"})
+                if not file_data:
+                    self._send_json_response(400, {"error": "No file data"})
                     return
             
             # 保存到 inbound 目录
-            filename = f"{uuid.uuid4()}.{ext}"
+            if not filename:
+                filename = f"{uuid.uuid4()}.bin"
             filepath = os.path.join(INBOUND_DIR, filename)
             
             os.makedirs(INBOUND_DIR, exist_ok=True)
             with open(filepath, 'wb') as f:
-                f.write(img_data)
+                f.write(file_data)
             
             self._send_json_response(200, {
                 "success": True,
                 "path": filepath,
-                "filename": filename
+                "filename": filename,
+                "originalName": original_name,
+                "mimeType": mime_type,
+                "size": len(file_data)
             })
             
         except Exception as e:

@@ -4,6 +4,9 @@
 
 A modern, feature-rich mobile web interface for OpenClaw Gateway that provides seamless AI agent interaction on any device.
 
+![Version](https://img.shields.io/badge/version-2026.03.06-blue)
+![License](https://img.shields.io/badge/license-GPLv3-blue)
+
 ## Features
 
 📱 **Mobile-First Design**
@@ -39,6 +42,8 @@ A modern, feature-rich mobile web interface for OpenClaw Gateway that provides s
 - Navigation menu with quick access
 - Chat history persistence
 - Image preview and gallery view
+- 🔊 **Text-to-Speech** - Read AI responses aloud
+- 📎 **File Upload** - Send any file type (PDF, Office docs, etc.)
 
 ⚙️ **Customizable**
 - App name and description
@@ -719,6 +724,32 @@ For detailed architecture, see [Architecture](docs/ARCHITECTURE.md).
 - OpenClaw Gateway running on port 18789
 - Python 3.7+ (for server.py)
 - Modern web browser with WebSocket support
+
+## Changelog
+
+### 2026.03.06
+
+**New Features**
+- 🔊 **TTS (Text-to-Speech)** - Read AI responses aloud with auto-play option
+- 📎 **File Upload** - Support for sending any file type (PDF, Office docs, etc.)
+
+**Bug Fixes**
+- 🐛 Fixed `GatewayClient` class missing `constructor` keyword causing JS syntax error
+- 🐛 Fixed `config.js` loading from wrong directory, now loads from `WORKSPACE_DIR`
+
+**Improvements**
+- ⚡ Enhanced debug logging for configuration troubleshooting
+- ⚡ Added fallback token retrieval mechanism
+- 🧹 Removed sensitive files (`config.js`, `server_config.py`) from repo, use parent directory config
+
+### 2026.03.01
+
+**Initial Release**
+- 🌐 Multi-language support (Chinese/English)
+- 💬 Real-time chat with streaming output
+- 🧠 Thinking process display
+- 🔧 Tool execution status
+- 📱 Mobile-optimized interface
 
 ## License
 
