@@ -462,7 +462,9 @@ def create_server_config_py(config, dashboard_port=8080, gateway_port=18789):
     
     dashboard_dir = config.get("dashboard_dir", "/path/to/openclaw/dist/control-ui")
     ts_ip = config.get("ts_ip", "")  # 从 config 获取 Tailscale IP
-    bind_host = ts_ip if ts_ip else "0.0.0.0"  # 优先使用 Tailscale IP
+    # 安全默认值：优先 Tailscale IP，否则仅本地访问
+    # ⚠️ 注意：不要设置为 0.0.0.0，会使服务暴露到公网！
+    bind_host = ts_ip if ts_ip else "127.0.0.1"
     domain = config.get("domain", "your-domain.example.com")
     # 使用 setup.py 所在目录的父目录作为配置文件输出路径
     config_path = Path(__file__).parent.parent / "server_config.py"
@@ -472,7 +474,7 @@ def create_server_config_py(config, dashboard_port=8080, gateway_port=18789):
 OpenClaw Mobile Server 配置文件
 自动生成于 {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-警告：此文件包含敏感信息，请勿提交到 Git！
+⚠️ 警告：此文件包含敏感信息，请勿提交到 Git！
 位置：{config_path}
 """
 
@@ -483,10 +485,18 @@ OpenClaw Mobile Server 配置文件
 # 监听端口
 PORT = {dashboard_port}
 
-# 监听地址
-# 优先绑定 Tailscale IP（更安全），如无则绑定所有接口
-# Tailscale IP: 仅 Tailscale 网络可访问
-# 0.0.0.0: 所有网络可访问（需配合防火墙）
+# 监听地址 - 请谨慎修改！
+#
+# 🚨 安全警告：服务启动时会检查 BIND_HOST！
+#
+# - 127.0.0.1: 仅本机可访问（最安全，默认）
+# - Tailscale IP (100.x.x.x): 仅 VPN 网络可访问（安全）
+# - 192.168.x.x: 仅局域网可访问（中等风险）
+# - 0.0.0.0: 【禁止】服务会拒绝启动！
+#
+# ⛔ 绝对不要设置为 0.0.0.0！服务会拒绝启动并报错！
+# 如需远程访问，请配置 Tailscale VPN 并使用 Tailscale IP。
+#
 BIND_HOST = '{bind_host}'
 
 # 域名（用于显示访问地址）
@@ -781,6 +791,9 @@ def main():
     else:
         print_warning("未检测到 systemd，跳过服务配置")
     
+    # 计算 BIND_HOST（与 create_server_config_py 逻辑一致）
+    actual_bind_host = ts_ip if ts_ip else "127.0.0.1"
+    
     # 完成
     print(f"""
 {BOLD}╔═══════════════════════════════════════════╗
@@ -793,9 +806,18 @@ def main():
 {f"   - http://{domain}:{dashboard_port}/" if domain else ""}
 {f"   - http://{cloud_http_domain}:{dashboard_port}/" if cloud_http_domain else ""}
 
+🔒 BIND_HOST 配置：
+   - 绑定地址: {actual_bind_host}
+{f"   - ✅ 仅 Tailscale VPN 可访问（安全）" if ts_ip else "   - ✅ 仅本机可访问（最安全）"}
+
 🔧 启用功能：
    - Tailscale 访问: {"✅" if ts_ip else "❌"}
    - 云端口转发: {"✅" if (cloud_http_domain or cloud_ws_url) else "❌"}
+
+⚠️  安全提示：
+   - 如需远程访问，请配置 Tailscale VPN
+   - 不要手动修改 BIND_HOST 为 0.0.0.0
+   - 详细说明请查看 README.md
 
 📖 更多信息请查看 README.md
 """)

@@ -44,7 +44,7 @@ except ImportError as e:
     print(f"[Config] server_config.py not found, using defaults: {e}")
     # 如果没有配置文件，使用默认值
     PORT = 8080
-    BIND_HOST = '0.0.0.0'  # 监听所有接口
+    BIND_HOST = '127.0.0.1'  # 默认仅本机访问（安全）
     TAILSCALE_DOMAIN = 'localhost'
     GATEWAY_HTTP = 'http://127.0.0.1:18789'
     # 计算工作目录（处理符号链接）
@@ -854,20 +854,64 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 def main():
+    # 安全检查：禁止绑定 0.0.0.0
+    if BIND_HOST == "0.0.0.0":
+        print("""
+╔════════════════════════════════════════════════════════════════╗
+║                    ⛔ 安全错误：BIND_HOST = '0.0.0.0'           ║
+╚════════════════════════════════════════════════════════════════╝
+
+🚨 拒绝启动！BIND_HOST = '0.0.0.0' 会使服务暴露到公网！
+
+⚠️  这会带来严重的安全风险：
+   • 任何人都可以访问你的 AI 助手
+   • 你的数据可能被窃取
+   • 攻击者可能利用你的服务
+
+✅ 请修改 server_config.py 中的 BIND_HOST：
+   
+   推荐配置：
+   ─────────────────────────────────────────────────────────────
+   │ BIND_HOST = '127.0.0.1'    # 仅本机访问（最安全，默认）
+   │ BIND_HOST = '100.x.x.x'    # Tailscale IP（VPN 访问，安全）
+   │ BIND_HOST = '192.168.x.x'  # 内网 IP（局域网访问）
+   ─────────────────────────────────────────────────────────────
+
+💡 如需远程访问，请使用 Tailscale 等 VPN 方案：
+   1. 安装 Tailscale: curl -fsSL https://tailscale.com/install.sh | sh
+   2. 获取 Tailscale IP: tailscale ip
+   3. 重新运行 setup.py 配置
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+服务已拒绝启动，请修改配置后重试。
+""")
+        sys.exit(1)
+    
     os.chdir(WORKSPACE_DIR)
     
     print(f"Starting OpenClaw Web Server on port {PORT}...")
-    print(f"Workspace: {WORKSPACE_DIR}")
-    print(f"Dashboard: {DASHBOARD_DIR}")
-    print(f"Media: {MEDIA_DIR}")
-    print(f"Gateway: {GATEWAY_HTTP}")
+    print(f"")
+    print(f"🔒 安全配置:")
+    print(f"   BIND_HOST = {BIND_HOST}")
+    if BIND_HOST == "127.0.0.1":
+        print(f"   ✅ 仅本机可访问（最安全）")
+    elif BIND_HOST.startswith("100."):
+        print(f"   ✅ 仅 Tailscale VPN 可访问（安全）")
+    elif BIND_HOST.startswith("192.168.") or BIND_HOST.startswith("10."):
+        print(f"   ⚠️  局域网可访问")
+    print(f"")
+    print(f"📁 目录配置:")
+    print(f"   Workspace: {WORKSPACE_DIR}")
+    print(f"   Dashboard: {DASHBOARD_DIR}")
+    print(f"   Media:     {MEDIA_DIR}")
+    print(f"   Gateway:   {GATEWAY_HTTP}")
     print(f"")
     
-    print(f"Access URLs:")
-    print(f"  - Dashboard:   http://{TAILSCALE_DOMAIN}:{PORT}/")
-    print(f"  - Mobile:      http://{TAILSCALE_DOMAIN}:{PORT}/mobile.html")
-    print(f"  - Browse:      http://{TAILSCALE_DOMAIN}:{PORT}/browse/")
-    print(f"  - Media files: http://{TAILSCALE_DOMAIN}:{PORT}/media/")
+    print(f"🌐 访问地址:")
+    print(f"   Dashboard:   http://{TAILSCALE_DOMAIN}:{PORT}/")
+    print(f"   Mobile:      http://{TAILSCALE_DOMAIN}:{PORT}/mobile.html")
+    print(f"   Browse:      http://{TAILSCALE_DOMAIN}:{PORT}/browse/")
+    print(f"   Media files: http://{TAILSCALE_DOMAIN}:{PORT}/media/")
     
     with ThreadedTCPServer((BIND_HOST, PORT), ProxyServer) as httpd:
         try:
