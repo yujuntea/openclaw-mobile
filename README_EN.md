@@ -4,7 +4,7 @@
 
 A modern, feature-rich mobile web interface for OpenClaw Gateway that provides seamless AI agent interaction on any device.
 
-![Version](https://img.shields.io/badge/version-2026.03.06-blue)
+![Version](https://img.shields.io/badge/version-2026.03.15-blue)
 ![License](https://img.shields.io/badge/license-GPLv3-blue)
 
 ## Features
@@ -26,10 +26,21 @@ A modern, feature-rich mobile web interface for OpenClaw Gateway that provides s
 - Visual tool execution tracking
 - Auto-reconnect on network changes
 
-🔐 **Secure & Flexible Authentication**
-- Token-based authentication
-- Login state persistence (configurable expiry)
-- Support for multiple environments (local, Tailscale, cloud)
+🔐 **Secure Authentication**
+- Session Token-based authentication
+- 24-hour session validity
+- Protected API endpoints (/browse/, /api/upload, /api/command)
+- Login state persistence in localStorage
+
+🔄 **Model Switching**
+- Real-time AI model switching via dropdown
+- Model state persistence in browser
+- Seamless switching without page reload
+
+⚡ **Quick Actions**
+- Expandable quick action panel
+- Fast access to common features
+- Touch-optimized buttons
 
 🔌 **Multi-Environment Support**
 - Automatic WebSocket URL detection
@@ -582,6 +593,17 @@ Add all access domains in `openclaw.json`:
 
 **Note**: `config.js` and `server_config.py` contain sensitive info and won't be tracked by Git.
 
+### Sensitive File Protection
+
+**The project strictly isolates sensitive configurations:**
+
+| File | Content | Git Status |
+|------|---------|------------|
+| `config.js` | Gateway Token, WebSocket URL | ✅ Ignored by .gitignore |
+| `server_config.py` | Bind address, Gateway HTTP address | ✅ Ignored by .gitignore |
+| `.env` | API keys and environment variables | ✅ Ignored by .gitignore |
+| `*.local` | Local override configs | ✅ Ignored by .gitignore |
+
 ## 🌐 Multi-Language Support
 
 OpenClaw Mobile supports multiple languages with easy switching.
@@ -726,6 +748,27 @@ For detailed architecture, see [Architecture](docs/ARCHITECTURE.md).
 - Modern web browser with WebSocket support
 
 ## Changelog
+
+### 2026.03.15
+
+**New Features**
+- 🔄 **Real-time Model Switching** - Dropdown selector for instant AI model switching
+- ⚡ **Quick Actions Panel** - Expandable panel for fast access to common features
+- 🔐 **Session Authentication** - New SessionManager class with 24-hour token validity
+- 🛡️ **Protected Paths** - Sensitive API endpoints require authentication
+
+**Bug Fixes**
+- 🐛 Fixed model selector showing duplicate checkmarks (rely on browser's selected attribute)
+- 🐛 Fixed model state reset after clearing localStorage (API no longer returns current field)
+
+**Code Improvements**
+- 🧹 Removed duplicate code in server.py (duplicate method definitions, duplicate imports)
+- 🧹 Removed duplicate tags and event listeners in mobile.html
+- 🧹 Optimized code structure, reduced ~100 lines of duplicate code
+
+**Security Enhancements**
+- 🔒 Improved .gitignore to ensure sensitive files are never committed
+- 🔒 Separated sensitive config files (config.js, server_config.py, .env) from code
 
 ### 2026.03.06
 

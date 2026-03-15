@@ -58,9 +58,9 @@
     }
     .lang-btn:active { transform: scale(0.9); background: var(--bg4); }
     
-    .chat { position: absolute; top: var(--safe-top); bottom: var(--input-height); left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 16px; -webkit-overflow-scrolling: touch; }
+    .chat { position: absolute; top: var(--safe-top); bottom: var(--input-height); left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 12px; padding-bottom: 20px; -webkit-overflow-scrolling: touch; } 
     
-    .msg { display: flex; gap: 8px; margin-bottom: 16px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
+    .msg { display: flex; gap: 8px; margin-bottom: 12px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
     @keyframes in { from { opacity: 0; transform: translateY(8px); } }
     .msg.user { margin-left: auto; flex-direction: row-reverse; }
     .msg.ai { flex-direction: row; }
@@ -127,19 +127,80 @@
     .streaming .thinking-icon { animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
     
-    .input-wrap { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.95); padding: 8px 12px; padding-bottom: calc(8px + env(safe-area-inset-bottom,0)); border-top: .5px solid rgba(255,255,255,.1); display: flex; gap: 8px; align-items: center; z-index: 100; flex-wrap: wrap; }
-    .input { flex: 1; background: var(--bg3); border-radius: 20px; padding: 10px 16px; font-size: 16px; color: var(--text); border: none; outline: none; -webkit-appearance: none; min-width: 60%; }
-    .send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .input-wrap { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.95); padding: 6px 8px; padding-bottom: calc(6px + env(safe-area-inset-bottom,0)); border-top: .5px solid rgba(255,255,255,.1); z-index: 100; }
+    .input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .input-row:last-child { margin-bottom: 0; }
+  
+  /* 快捷工具面板（可展开/收起） */
+  .quick-panel {
+    position: absolute;
+    bottom: 52px;
+    left: 12px;
+    right: 12px;
+    background: rgba(44,44,46,0.98);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px;
+    z-index: 150;
+    animation: slideUp 0.2s ease;
+  }
+  
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .quick-panel-content {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  
+  .quick-panel-content a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 6px;
+    background: rgba(58,58,60,0.6);
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 11px;
+    transition: all 0.15s ease;
+  }
+  
+  .quick-panel-content a:hover {
+    background: rgba(58,58,60,0.9);
+  }
+  
+  .quick-panel-content a:active {
+    background: var(--accent);
+    transform: scale(0.95);
+  }
+  
+  .quick-panel-content a .icon {
+    font-size: 18px;
+  }
+  
+  .quick-panel-content a .label {
+    font-size: 10px;
+    color: var(--text2);
+  }
+    .input { flex: 1; background: var(--bg3); border-radius: 18px; padding: 10px 16px; font-size: 16px; color: var(--text); border: none; outline: none; -webkit-appearance: none; }
+    .send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .send:active { transform: scale(.92); }
     .send:disabled { background: var(--bg3); }
     
     /* 图片按钮 */
-    .img-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); border: none; color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .img-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); border: none; color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .img-btn:active { transform: scale(.92); }
     #imgInput { display: none; }
     
-    /* 图片预览 - 支持多图 */
-    .img-preview { display: none; width: 100%; padding: 8px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* 图片预览 - 支持多图（单独一行，固定在输入区域上方） */
+    .img-preview { display: none; position: fixed; bottom: 90px; left: 0; right: 0; width: 100%; padding: 8px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; background: rgba(28,28,30,.95); border-top: .5px solid rgba(255,255,255,.1); z-index: 99; }
     .img-preview.has-img { display: flex; align-items: center; gap: 8px; }
     .img-preview .img-list { display: flex; gap: 8px; flex-shrink: 0; }
     .img-preview .img-item { position: relative; flex-shrink: 0; }
@@ -147,8 +208,8 @@
     .img-preview .img-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); border: none; color: #fff; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
     .img-preview .img-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
     
-    /* 文件预览 */
-    .file-preview { width: 100%; padding: 8px 0; }
+    /* 文件预览（单独一行，固定在输入区域上方） */
+    .file-preview { display: none; position: fixed; bottom: 90px; left: 0; right: 0; width: 100%; padding: 8px 12px; background: rgba(28,28,30,.95); border-top: .5px solid rgba(255,255,255,.1); z-index: 99; }
     .file-preview.has-file { display: flex; align-items: center; gap: 8px; }
     .file-preview .file-list { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
     .file-preview .file-item { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg3); border-radius: 8px; border: 1px solid var(--bg4); }
@@ -170,9 +231,213 @@
     
     /* 回复中的思考/工具 */
     .reply-tools { margin-top: 8px; }
+  /* 登录模态框 */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.show { display: flex; }
+  .modal-content {
+    background: var(--bg1);
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%;
+    max-width: 360px;
+  }
+  .login-header { text-align: center; margin-bottom: 24px; }
+  .login-icon { font-size: 48px; display: block; margin-bottom: 12px; }
+  .login-form .input-group { margin-bottom: 16px; }
+  .login-form label { display: block; font-size: 14px; color: var(--text2); margin-bottom: 8px; }
+  .login-form input[type="password"] {
+    width: 100%; padding: 12px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 16px; box-sizing: border-box;
+  }
+  .checkbox-label {
+    display: flex; align-items: center; gap: 8px; font-size: 14px;
+    color: var(--text2); cursor: pointer; margin: 12px 0;
+  }
+  .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; }
+  .login-btn {
+    width: 100%; padding: 14px; background: var(--accent); border: none;
+    border-radius: 8px; color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; margin-top: 16px;
+  }
+  .login-btn:active { opacity: 0.8; }
+  .login-hint { text-align: center; font-size: 12px; color: var(--text3); margin-top: 16px; }
+  
+  /* 快捷操作栏 */
+  /* 快捷操作栏 */
+  .quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(28,28,30,0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+    scrollbar-width: none;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .quick-actions::-webkit-scrollbar { display: none; }
+  
+  .qa-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 4px 6px;
+    background: rgba(58,58,60,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 9px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    min-width: 48px;
+    height: 32px;
+  }
+  
+  .qa-btn:hover {
+    background: rgba(58,58,60,0.9);
+    border-color: rgba(255,255,255,0.2);
+  }
+  
+  .qa-btn:active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    transform: scale(0.95);
+  }
+  
+  .qa-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+  
+  .qa-text {
+    font-size: 8px;
+    color: var(--text2);
+    font-weight: 500;
+  }
+  
+  .qa-btn:active .qa-text {
+    color: #fff;
+  }
+  
+  .qa-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.15);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+  
+  .qa-select {
+    padding: 6px 8px;
+    background: rgba(58,58,60,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    min-width: 80px;
+    height: 32px;
+    outline: none;
+  }
+  
+  .qa-select:hover {
+    border-color: rgba(255,255,255,0.2);
+  }
+  
+  /* 下拉菜单 */
+  .qa-dropdown {
+    position: relative;
+    flex-shrink: 0;
+  }
+  
+  .qa-dropdown-btn {
+    min-width: 60px;
+  }
+  
+  .qa-menu {
+    position: absolute;
+    bottom: 120%;
+    left: 0;
+    background: rgba(44,44,46,0.98);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 140px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    z-index: 1000;
+  }
+  
+  .qa-menu a {
+    display: block;
+    padding: 10px 16px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.15s ease;
+  }
+  
+  .qa-menu a:hover {
+    background: rgba(255,255,255,0.1);
+  }
+  
+  .qa-menu a:active {
+    background: var(--accent);
+  }
   </style>
 </head>
 <body>
+  <!-- Session 登录模态框 -->
+  <div id="sessionLoginModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="login-header">
+        <span class="login-icon">🔐</span>
+        <h2>安全登录</h2>
+      </div>
+      
+      <div class="login-form">
+        <div class="input-group">
+          <label>Gateway Token</label>
+          <input type="password" id="sessionLoginToken" 
+                 placeholder="请输入访问令牌"
+                 autocomplete="off">
+        </div>
+        
+        <label class="checkbox-label">
+          <input type="checkbox" id="rememberToken">
+          <span>记住 Token（本地保存）</span>
+        </label>
+        
+        <button class="login-btn" onclick="doSessionLogin()">
+          登 录
+        </button>
+        
+        <p class="login-hint">
+          Token 从 Gateway 配置中获取
+        </p>
+      </div>
+    </div>
+  </div>
+  
   <div class="login" id="login">
     <div class="login-emoji">🤖</div>
     <div class="login-title" data-i18n="appName">小强 AI</div>
@@ -181,6 +446,13 @@
     <input type="text" class="login-input" id="urlInput" data-i18n-placeholder="proxyUrlPlaceholder" placeholder="代理地址">
     <input type="password" class="login-input" id="tokenInput" data-i18n-placeholder="tokenPlaceholder" placeholder="访问令牌">
     <input type="text" class="login-input" id="sessionKey" data-i18n-placeholder="sessionPlaceholder" placeholder="会话ID">
+    
+    <!-- 记住 Token 复选框 -->
+    <label class="checkbox-label" style="margin: 8px 0;">
+      <input type="checkbox" id="rememberGatewayToken">
+      <span>记住 Token（本地保存）</span>
+    </label>
+    
     <button class="login-btn" onclick="doLogin()" data-i18n="connectBtn">连接</button>
     <div class="login-err" id="loginErr"></div>
   </div>
@@ -201,20 +473,53 @@
     <!-- TTS 播放指示器 -->
     <div class="tts-indicator" id="ttsIndicator">朗读中...</div>
     <div class="chat" id="chatArea"></div>
-    <div class="input-wrap">
-      <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
-      <input type="file" id="fileInput" accept="*" onchange="handleFileSelect()" style="display:none">
-      <button class="img-btn" onclick="document.getElementById('imgInput').click()" data-i18n-title="sendImageBtn" title="发送图片">📷</button>
-      <button class="img-btn" onclick="document.getElementById('fileInput').click()" data-i18n-title="sendFileBtn" title="发送文件">📎</button>
-      <input type="text" class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息..." enterkeyhint="send">
-      <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
-      <div class="img-preview" id="imgPreview">
-        <div class="img-list" id="imgList"></div>
-        <div class="img-count" id="imgCount"></div>
+    
+    <!-- 快捷工具栏（独立区域，可展开/收起） -->
+    <div class="quick-panel" id="quickPanel" style="display: none;">
+      <div class="quick-panel-content">
+        <a href="javascript:void(0)" onclick="sendCommand('/status'); toggleQuickPanel();">📊 状态</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/compact'); toggleQuickPanel();">🧹 压缩</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/context detail'); toggleQuickPanel();">📋 上下文</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/stop'); toggleQuickPanel();">⏹️ 停止</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/new'); toggleQuickPanel();">🆕 新会话</a>
       </div>
-      <div class="file-preview" id="filePreview" style="display:none">
-        <div class="file-list" id="fileList"></div>
-        <div class="file-count" id="fileCount"></div>
+    </div>
+    
+    <!-- 图片预览（单独一行） -->
+    <div class="img-preview" id="imgPreview">
+      <div class="img-list" id="imgList"></div>
+      <div class="img-count" id="imgCount"></div>
+    </div>
+    
+    <!-- 文件预览（单独一行） -->
+    <div class="file-preview" id="filePreview" style="display:none">
+      <div class="file-list" id="fileList"></div>
+      <div class="file-count" id="fileCount"></div>
+    </div>
+    
+    <!-- 输入区域 -->
+    <div class="input-wrap">
+      <!-- 第一行：工具按钮 -->
+      <div class="input-row">
+        <button class="qa-btn" onclick="toggleQuickPanel()" title="快捷操作">
+          <span class="qa-icon">⚡</span>
+          <span class="qa-text">快捷</span>
+        </button>
+        
+        <select class="qa-select" id="modelSelect" onchange="switchModel(this.value)">
+          <option value="">🔄 模型</option>
+        </select>
+        
+        <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
+        <input type="file" id="fileInput" accept="*" onchange="handleFileSelect()" style="display:none">
+        <button class="img-btn" onclick="document.getElementById('imgInput').click()" data-i18n-title="sendImageBtn" title="发送图片">📷</button>
+        <button class="img-btn" onclick="document.getElementById('fileInput').click()" data-i18n-title="sendFileBtn" title="发送文件">📎</button>
+      </div>
+      
+      <!-- 第二行：输入框 -->
+      <div class="input-row">
+        <input type="text" class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息..." enterkeyhint="send">
+        <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
       </div>
     </div>
   </div>
@@ -316,6 +621,205 @@
     let autoPlayEnabled = false;  // 是否启用自动播放
     let currentUtterance = null;  // 当前正在播放的语音
     let lastAIMessage = '';  // 最后一条 AI 消息
+    
+    // ========== Session 认证管理 ==========
+    
+    // 检查 Session 是否有效
+    async function checkSessionAuth() {
+      const sessionToken = localStorage.getItem('session_token');
+      if (!sessionToken) {
+        return false;
+      }
+      
+      try {
+        const resp = await fetch('/api/health', {
+          headers: {'Authorization': 'Bearer ' + sessionToken}
+        });
+        return resp.status !== 401;
+      } catch (e) {
+        console.error('Session 验证失败:', e);
+        return false;
+      }
+    }
+    
+    // 显示 Session 登录模态框
+    function showSessionLoginModal() {
+      document.getElementById('sessionLoginModal').classList.add('show');
+      // 自动填充保存的 token
+      const savedToken = localStorage.getItem('saved_gateway_token');
+      if (savedToken) {
+        document.getElementById('sessionLoginToken').value = savedToken;
+        document.getElementById('rememberToken').checked = true;
+      }
+    }
+    
+    // 隐藏 Session 登录模态框
+    function hideSessionLoginModal() {
+      document.getElementById('sessionLoginModal').classList.remove('show');
+    }
+    
+    // Session 登录
+    async function doSessionLogin() {
+      const token = document.getElementById('sessionLoginToken').value.trim();
+      const remember = document.getElementById('rememberToken').checked;
+      
+      if (!token) {
+        alert('请输入 Token');
+        return;
+      }
+      
+      try {
+        const resp = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token})
+        });
+        
+        const data = await resp.json();
+        
+        if (data.success) {
+          // 保存 session token
+          localStorage.setItem('session_token', data.token);
+          
+          // 保存 gateway token（如果勾选记住）
+          if (remember) {
+            localStorage.setItem('saved_gateway_token', token);
+          } else {
+            localStorage.removeItem('saved_gateway_token');
+          }
+          
+          // 隐藏登录框
+          hideSessionLoginModal();
+          
+          return true;
+        } else {
+          alert('登录失败: ' + (data.message || data.error || '未知错误'));
+          return false;
+        }
+      } catch (e) {
+        alert('登录失败: ' + e.message);
+        return false;
+      }
+    }
+    
+    // 获取认证头
+    function getAuthHeaders() {
+      const sessionToken = localStorage.getItem('session_token');
+      const headers = {};
+      if (sessionToken) {
+        headers['Authorization'] = 'Bearer ' + sessionToken;
+      }
+      return headers;
+    }
+    
+    // ========== 快捷操作 ==========
+    
+    // 切换快捷面板
+    function toggleQuickPanel() {
+      const panel = document.getElementById('quickPanel');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+    
+    // 点击其他地方关闭面板
+    document.addEventListener('click', function(e) {
+      const panel = e.target.closest('.quick-panel');
+      const btn = e.target.closest('.qa-btn');
+      if (!panel && !btn) {
+        const quickPanel = document.getElementById('quickPanel');
+        if (quickPanel) quickPanel.style.display = 'none';
+      }
+    });
+    
+    // 发送命令（直接发送消息）
+    // 发送命令
+    async function sendCommand(command) {
+      // 检查是否已连接
+      if (!gwClient || !gwClient.authenticated) {
+        alert('请等待连接建立...');
+        return;
+      }
+      
+      // 命令名称映射
+      const cmdNames = {
+        '/status': '📊 状态',
+        '/compact': '🧹 压缩',
+        '/context detail': '📋 上下文',
+        '/stop': '⏹️ 停止',
+        '/new': '🆕 新会话'
+      };
+      
+      // 显示用户消息
+      addMsg({content: cmdNames[command] || command, role: 'user'});
+      
+      // 显示"发送中"指示器
+      showWorkIndicator(true, '🤔 处理中...');
+      
+      // 创建 AI 消息容器
+      const aiMsg = createAIMessage();
+      const bubble = aiMsg.querySelector('.bubble');
+      bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待回复...';
+      
+      try {
+        // 发送命令
+        const result = await gwClient.sendMessage(command, []);
+        console.log('命令发送成功:', result);
+      } catch (e) {
+        // 隐藏指示器
+        showWorkIndicator(false);
+        // 显示错误
+        bubble.innerHTML = '❌ 发送失败：' + e.message;
+        console.error('发送命令失败:', e);
+      }
+    }
+    
+    // 切换模型
+    async function switchModel(model) {
+      if (!model) return;
+      
+      // 检查是否已连接
+      if (!gwClient || !gwClient.authenticated) {
+        alert('请等待连接建立...');
+        return;
+      }
+      
+      // 显示用户消息
+      addMsg({content: `🔄 切换模型：${model}`, role: 'user'});
+      
+      // 显示"发送中"指示器
+      showWorkIndicator(true, '🤔 处理中...');
+      
+      // 创建 AI 消息容器
+      const aiMsg = createAIMessage();
+      const bubble = aiMsg.querySelector('.bubble');
+      bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待回复...';
+      
+      try {
+        // 发送切换模型消息
+        const result = await gwClient.sendMessage(`/model ${model}`, []);
+        console.log('切换模型成功:', result);
+        
+        // 保存当前模型到 localStorage
+        localStorage.setItem('current_model', model);
+        
+        // 重新加载模型列表以更新对号标记
+        await loadModels();
+        
+        // 隐藏指示器
+        showWorkIndicator(false);
+        bubble.innerHTML = '✅ 已切换到模型：' + model;
+        
+      } catch (e) {
+        // 隐藏指示器
+        showWorkIndicator(false);
+        // 显示错误
+        bubble.innerHTML = '❌ 切换失败：' + e.message;
+        console.error('切换模型失败:', e);
+      }
+    }
     
     // ========== WebSocket 客户端实现 ==========
     class GatewayClient {
@@ -589,11 +1093,21 @@
           authToken = window.OPENCLAW_CONFIG.gateway.defaultToken;
           console.log('[Mobile] Using fallback token from OPENCLAW_CONFIG');
         }
+        // 如果还是没有，尝试从保存的 token 获取
+        if ((!authToken || authToken === 'YOUR_GATEWAY_TOKEN_HERE') && localStorage.getItem('saved_gateway_token')) {
+          authToken = localStorage.getItem('saved_gateway_token');
+          console.log('[Mobile] Using saved token from localStorage');
+        }
       }
       
       document.getElementById('tokenInput').value = authToken;
       console.log('[Mobile] Token input value set:', document.getElementById('tokenInput').value ? document.getElementById('tokenInput').value.substring(0, 10) + '...' : 'empty');
       // tokenInput 可编辑，用户可以修改
+      
+      // 如果有保存的 token，勾选"记住 Token"
+      if (localStorage.getItem('saved_gateway_token')) {
+        document.getElementById('rememberGatewayToken').checked = true;
+      }
       
       document.getElementById('sessionKey').value = sessionKey;
       document.getElementById('sessionKey').disabled = true; // 会话ID固定
@@ -797,6 +1311,14 @@
       authToken = document.getElementById('tokenInput').value.trim();
       sessionKey = document.getElementById('sessionKey').value.trim() || 'agent:main:main';
       
+      // 记住 Token 功能
+      const rememberGatewayToken = document.getElementById('rememberGatewayToken').checked;
+      if (rememberGatewayToken) {
+        localStorage.setItem('saved_gateway_token', authToken);
+      } else {
+        localStorage.removeItem('saved_gateway_token');
+      }
+      
       // 保存登录状态（1小时有效期）
       saveLoginState(wsUrl, authToken, sessionKey);
       localStorage.setItem('oc_token', authToken);
@@ -806,8 +1328,36 @@
       document.getElementById('login').classList.add('hidden');
       document.getElementById('chat').classList.remove('hidden');
       
+      // 加载模型列表
+      loadModels();
+      
       // 建立 WebSocket 连接
       connectWebSocket(wsUrl);
+      
+      // 同时进行 Session 登录（用于 HTTP API 认证）- 异步执行
+      doSessionLoginAsync(authToken);
+    }
+    
+    // 异步 Session 登录
+    async function doSessionLoginAsync(token) {
+      try {
+        const resp = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token})
+        });
+        
+        const data = await resp.json();
+        
+        if (data.success) {
+          localStorage.setItem('session_token', data.token);
+          console.log('✅ Session 登录成功');
+        } else {
+          console.warn('⚠️ Session 登录失败:', data.error);
+        }
+      } catch (e) {
+        console.error('❌ Session 登录错误:', e);
+      }
     }
     
     // 自动登录（使用保存的登录状态）
@@ -830,6 +1380,9 @@
       // 进入聊天界面
       document.getElementById('login').classList.add('hidden');
       document.getElementById('chat').classList.remove('hidden');
+      
+      // 加载模型列表
+      loadModels();
       
       // 建立 WebSocket 连接
       connectWebSocket(state.wsUrl);
@@ -1338,8 +1891,19 @@
         // 完成
         showWorkIndicator(false);
         
-        // 保存到历史记录（如果之前没有保存）
         const aiMsg = document.querySelector('.msg.ai:last-child .bubble');
+        
+        // 处理 final 状态的消息内容（可能没有 delta 状态）
+        if (message && aiMsg) {
+          const content = extractContent(message);
+          if (content && content.trim()) {
+            aiMsg.dataset.rawText = content;
+            aiMsg.innerHTML = fmt(content) + '<button class="tts-btn" style="display:none;" onclick="toggleTTS(this)">🔊 朗读</button>';
+            scrollToBottom();
+          }
+        }
+        
+        // 保存到历史记录（如果之前没有保存）
         if (aiMsg) {
           const content = aiMsg.innerText;
           if (content && content !== '⏳ 响应完成') {
@@ -1444,7 +2008,6 @@
 
     function showErr(msg) {
       document.getElementById('loginErr').textContent = msg;
-      document.getElementById('loginErr').style.display = 'block';
       document.getElementById('loginErr').style.display = 'block';
       console.error('Error:', msg);
     }
@@ -1836,6 +2399,50 @@
     
     // 移除已选择的图片
     function removeImg() { clearImages(); }
+
+    // 加载模型列表
+    async function loadModels() {
+      try {
+        const resp = await fetch('/api/models');
+        const data = await resp.json();
+        
+        if (data.models) {
+          const select = document.getElementById('modelSelect');
+          select.innerHTML = '<option value="">🔄 切换模型</option>';
+          
+          // 获取当前模型 - 只从 localStorage 读取，不依赖 API 返回的 current
+          // 因为 API 的 current 可能是全局默认值，不是用户选择的
+          let currentModel = localStorage.getItem('current_model') || '';
+          
+          // 如果 localStorage 为空，使用 API 返回的 current 作为初始值
+          if (!currentModel && data.current) {
+            currentModel = data.current;
+            // 但不保存到 localStorage，让用户明确知道这是默认值
+            console.log('使用默认模型:', currentModel);
+          }
+          
+          console.log('当前模型:', currentModel);
+          console.log('localStorage:', localStorage.getItem('current_model'));
+          console.log('data.current:', data.current);
+          
+          data.models.forEach(model => {
+            const modelId = model.id || model;
+            const modelName = model.name || model;
+            const isCurrent = modelId === currentModel;
+            // 只使用 selected 属性标识当前模型，浏览器会自动显示选中标记
+            select.innerHTML += `<option value="${modelId}" ${isCurrent ? 'selected' : ''}>${modelName}</option>`;
+          });
+          
+          // 更新下拉框显示文本
+          if (currentModel && select.selectedIndex > 0) {
+            select.title = '当前模型：' + select.options[select.selectedIndex].text;
+          }
+        }
+      } catch (e) {
+        console.error('加载模型列表失败:', e);
+      }
+    }
+
     
     // ========== 文件选择处理 ==========
     // selectedFiles 已在全局变量中声明
@@ -2203,15 +2810,16 @@
           window.speechSynthesis.getVoices();
         };
       }
+      
+      // 初始化语言
+      if (typeof i18n !== 'undefined') {
+        i18n.init();
+      }
     });
   </script>
   <script src="i18n.js"></script>
   <script src="config.js"></script>
   <script>
-    // 初始化语言
-    document.addEventListener('DOMContentLoaded', function() {
-      i18n.init();
-    });
     
     // 语言切换函数
     function toggleLang() {

@@ -11,6 +11,7 @@ OpenClaw Mobile Server - 统一的 Web 服务
 import http.server
 import socketserver
 import urllib.request
+import urllib.error
 import json
 import os
 import sys
@@ -19,6 +20,61 @@ import base64
 import time
 import re
 import html as html_module
+import secrets
+
+# ==================== Session Manager ====================
+class SessionManager:
+    """Session 管理器 - 用于用户认证"""
+    
+    def __init__(self):
+        self.sessions = {}  # session_token -> session_data
+        self.token_lifetime = 3600 * 24  # 24小时有效期
+    
+    def create_session(self, gateway_token, client_ip):
+        """创建新 session"""
+        session_token = secrets.token_urlsafe(32)
+        self.sessions[session_token] = {
+            'created_at': time.time(),
+            'gateway_token': gateway_token,
+            'ip': client_ip,
+            'last_used': time.time(),
+        }
+        return session_token
+    
+    def verify_session(self, session_token, client_ip):
+        """验证 session 是否有效"""
+        if not session_token or session_token not in self.sessions:
+            return False
+        
+        session = self.sessions[session_token]
+        
+        # 检查是否过期
+        if time.time() - session['created_at'] > self.token_lifetime:
+            del self.sessions[session_token]
+            return False
+        
+        # 更新最后使用时间
+        session['last_used'] = time.time()
+        return True
+    
+    def get_gateway_token(self, session_token):
+        """获取 session 对应的 gateway token"""
+        if session_token in self.sessions:
+            return self.sessions[session_token]['gateway_token']
+        return None
+    
+    def cleanup_expired(self):
+        """清理过期 session"""
+        now = time.time()
+        expired = [
+            token for token, data in self.sessions.items()
+            if now - data['created_at'] > self.token_lifetime
+        ]
+        for token in expired:
+            del self.sessions[token]
+
+# 全局 Session Manager 实例
+session_manager = SessionManager()
 
 # 添加配置文件搜索路径
 # 注意：敏感配置文件（server_config.py）只在 workspace 目录下
@@ -75,9 +131,73 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
     
     protocol_version = 'HTTP/1.1'
     
+    # 需要认证的路径
+    PROTECTED_PATHS = [
+        '/browse/',
+        '/media/',
+        '/api/upload',
+        '/api/command',
+    ]
+    
+    # 公开路径（不需要认证）
+    PUBLIC_PATHS = [
+        '/',
+        '/mobile.html',
+        '/config.js',
+        '/i18n.js',
+        '/api/login',
+        '/api/health',
+        '/api/config',
+        '/api/models',
+        '/api/model',
+        '/dashboard/',
+    ]
+    
     def log_message(self, format, *args):
         """自定义日志格式"""
         print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {self.address_string()} - {format % args}")
+    
+    def _get_cookie(self, name):
+        """获取 cookie 值"""
+        cookies = self.headers.get('Cookie', '')
+        for cookie in cookies.split(';'):
+            cookie = cookie.strip()
+            if '=' in cookie:
+                key, value = cookie.split('=', 1)
+                if key == name:
+                    return value
+        return None
+    
+    def _check_auth(self):
+        """检查请求是否已认证"""
+        # 公开路径直接放行
+        for path in self.PUBLIC_PATHS:
+            if self.path == path or self.path.startswith(path):
+                return True
+        
+        # 检查是否需要认证
+        needs_auth = any(self.path.startswith(p) for p in self.PROTECTED_PATHS)
+        if not needs_auth:
+            return True
+        
+        # 获取 session token
+        auth_header = self.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            session_token = auth_header[7:]
+        else:
+            # 也支持从 cookie 获取
+            session_token = self._get_cookie('session_token')
+        
+        # 验证 session
+        client_ip = self.client_address[0]
+        if session_token and session_manager.verify_session(session_token, client_ip):
+            # 保存 gateway_token 供后续使用
+            self.gateway_token = session_manager.get_gateway_token(session_token)
+            return True
+        
+        # 未认证，返回 401
+        self._send_json_response(401, {'error': 'Unauthorized', 'message': '请先登录'})
+        return False
     
     def handle_one_request(self):
         """重写以添加超时控制"""
@@ -93,18 +213,37 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
     
     def do_GET(self):
         """处理 GET 请求"""
+        # 配置 API（公开）- 在代理之前处理
+        if self.path == '/api/config':
+            self._handle_config()
+            return
+        
+        # Health API（公开）
+        if self.path == '/api/health':
+            self._send_json_response(200, {'status': 'ok', 'timestamp': time.time()})
+            return
+        
+        # 模型列表 API（公开）
+        if self.path == '/api/models':
+            self._handle_models()
+            return
+        
         # API 代理
         if self.path.startswith('/api/'):
             self._handle_get_proxy()
             return
         
-        # Media 文件服务
+        # Media 文件服务（需要认证）
         if self.path.startswith('/media/'):
+            if not self._check_auth():
+                return
             self._serve_media_file(self.path[7:])
             return
         
-        # 目录浏览
+        # 目录浏览（需要认证）
         if self.path.startswith('/browse/'):
+            if not self._check_auth():
+                return
             self._serve_directory_listing(self.path[8:])
             return
         
@@ -178,8 +317,27 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self.send_error(413, "Request too large")
             return
         
-        # 图片上传 API
+        # 登录 API（公开）
+        if self.path == '/api/login':
+            self._handle_login(content_length)
+            return
+        
+        # 命令执行 API（需要认证）
+        if self.path == '/api/command':
+            if not self._check_auth():
+                return
+            self._handle_command(content_length)
+            return
+        
+        # 切换模型 API（公开）
+        if self.path == '/api/model':
+            self._handle_model_switch(content_length)
+            return
+        
+        # 图片上传 API（需要认证）
         if self.path == '/api/upload':
+            if not self._check_auth():
+                return
             self._handle_upload(content_length)
             return
         
@@ -828,6 +986,217 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", len(response))
         self.end_headers()
         self.wfile.write(response)
+    
+    def _verify_gateway_token(self, token):
+        """验证 Gateway token 是否有效"""
+        try:
+            req = urllib.request.Request(
+                f"{GATEWAY_HTTP}/api/status",
+                headers={'Authorization': f'Bearer {token}'},
+                method='GET'
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return resp.status == 200
+        except Exception as e:
+            self.log_message("验证 Gateway token 失败: %s", str(e))
+            return False
+    
+    def _handle_login(self, content_length):
+        """处理登录请求"""
+        try:
+            content = self.rfile.read(content_length)
+            data = json.loads(content.decode('utf-8'))
+            gateway_token = data.get('token') or data.get('password')
+            
+            if not gateway_token:
+                self._send_json_response(400, {'error': 'Token required', 'message': '请输入 Token'})
+                return
+            
+            # 验证 Gateway token
+            if not self._verify_gateway_token(gateway_token):
+                self._send_json_response(401, {'error': 'Invalid token', 'message': 'Token 无效'})
+                return
+            
+            # 创建 session
+            client_ip = self.client_address[0]
+            session_token = session_manager.create_session(gateway_token, client_ip)
+            
+            self.log_message("用户登录成功: IP=%s", client_ip)
+            
+            self._send_json_response(200, {
+                'success': True,
+                'token': session_token,
+                'expires_in': 3600 * 24  # 24小时
+            })
+            
+        except json.JSONDecodeError:
+            self._send_json_response(400, {'error': 'Invalid JSON', 'message': '请求格式错误'})
+        except Exception as e:
+            self.log_message("登录错误: %s", str(e))
+            self._send_json_response(500, {'error': str(e), 'message': '服务器错误'})
+    
+    def _handle_command(self, content_length):
+        """处理快捷命令"""
+        try:
+            content = self.rfile.read(content_length)
+            data = json.loads(content.decode('utf-8'))
+            command = data.get('command')
+            
+            if not command:
+                self._send_json_response(400, {'error': 'Command required', 'message': '请提供命令'})
+                return
+            
+            # 获取 gateway token
+            gateway_token = getattr(self, 'gateway_token', None)
+            if not gateway_token:
+                self._send_json_response(401, {'error': 'Not authenticated', 'message': '未认证'})
+                return
+            
+            # 发送命令到 Gateway
+            result = self._send_gateway_command(gateway_token, command)
+            
+            self._send_json_response(200, {
+                'success': True,
+                'result': result
+            })
+            
+        except json.JSONDecodeError:
+            self._send_json_response(400, {'error': 'Invalid JSON', 'message': '请求格式错误'})
+        except Exception as e:
+            self.log_message("命令执行错误: %s", str(e))
+            self._send_json_response(500, {'error': str(e), 'message': '命令执行失败'})
+    
+    def _send_gateway_command(self, gateway_token, command):
+        """发送命令到 Gateway"""
+        try:
+            # 命令映射到 Gateway API
+            command_map = {
+                '/status': 'session.status',
+                '/compact': 'session.compact',
+                '/context detail': 'session.context',
+                '/stop': 'session.stop',
+                '/new': 'session.new',
+                '/help': 'session.help',
+            }
+            
+            method = command_map.get(command)
+            if not method:
+                return {'error': f'未知命令: {command}'}
+            
+            req = urllib.request.Request(
+                f"{GATEWAY_HTTP}/api/rpc",
+                data=json.dumps({
+                    'method': method,
+                    'params': {}
+                }).encode('utf-8'),
+                headers={
+                    'Authorization': f'Bearer {gateway_token}',
+                    'Content-Type': 'application/json'
+                },
+                method='POST'
+            )
+            
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode('utf-8'))
+                
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8') if e.fp else ''
+            self.log_message("Gateway HTTP 错误: %d %s", e.code, error_body)
+            return {'error': f'Gateway 错误: {e.code}'}
+        except Exception as e:
+            self.log_message("Gateway 请求错误: %s", str(e))
+            return {'error': f'Gateway 请求失败: {str(e)}'}
+    
+    def _handle_models(self):
+        """处理模型列表请求 - 从 Gateway 配置动态获取"""
+        try:
+            # 从 Gateway 配置文件读取模型列表
+            config_path = '/root/.openclaw/openclaw.json'
+            models = []
+            
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            
+            providers = config.get('models', {}).get('providers', {})
+            for provider_name, provider_data in providers.items():
+                for model in provider_data.get('models', []):
+                    model_id = model.get('id', '')
+                    model_name = model.get('name', model_id)
+                    full_id = f"{provider_name}/{model_id}"
+                    # 在名称前添加 provider 前缀，便于区分
+                    display_name = f"{model_name} ({provider_name})"
+                    models.append({
+                        'id': full_id,
+                        'name': display_name,
+                        'provider': provider_name
+                    })
+            
+            # 不返回 current，让前端完全依赖 localStorage
+            # 清理 localStorage 后，模型选择会重置为默认行为
+            self._send_json_response(200, {
+                'models': models
+            })
+        except Exception as e:
+            self.log_message("读取模型列表失败：%s", str(e))
+            # 失败时返回默认列表
+            self._send_json_response(200, {
+                'models': [
+                    {'id': 'bailian/glm-5', 'name': 'GLM-5', 'provider': 'bailian'},
+                    {'id': 'bailian/kimi-k2.5', 'name': 'Kimi K2.5', 'provider': 'bailian'},
+                    {'id': 'bailian/qwen3.5-plus', 'name': 'Qwen 3.5 Plus', 'provider': 'bailian'}
+                ]
+            })
+    
+    def _handle_model_switch(self, content_length):
+        """处理模型切换请求"""
+        try:
+            body = self.rfile.read(content_length)
+            data = json.loads(body)
+            model_id = data.get('model')
+            
+            if not model_id:
+                self._send_json_response(400, {'error': 'Missing model parameter'})
+                return
+            
+            # 代理到 Gateway
+            req = urllib.request.Request(
+                GATEWAY_HTTP + '/api/model',
+                data=json.dumps({'model': model_id}).encode(),
+                method='POST'
+            )
+            req.add_header('Content-Type', 'application/json')
+            
+            with urllib.request.urlopen(req, timeout=10) as response:
+                resp_data = json.loads(response.read().decode())
+                self._send_json_response(200, resp_data)
+        except Exception as e:
+            self.log_message("Model switch error: %s", str(e))
+            self._send_json_response(500, {'error': str(e)})
+    
+    def _handle_config(self):
+        """处理配置请求（返回默认配置）"""
+        import socket
+        hostname = socket.gethostname()
+        try:
+            local_ip = socket.gethostbyname(hostname)
+        except:
+            local_ip = 'localhost'
+        
+        ws_host = os.environ.get('WS_HOST', local_ip)
+        ws_port = os.environ.get('WS_PORT', '18789')
+        default_ws_url = f'ws://{ws_host}:{ws_port}/'
+        
+        self._send_json_response(200, {
+            'defaults': {
+                'wsUrl': default_ws_url,
+                'sessionKey': 'agent:main:main',
+            },
+            'info': {
+                'hostname': hostname,
+                'local_ip': local_ip,
+                'ws_port': ws_port,
+            }
+        })
     
     def do_OPTIONS(self):
         """处理 CORS 预检请求"""
