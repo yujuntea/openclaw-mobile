@@ -80,7 +80,7 @@ session_manager = SessionManager()
 # 注意：敏感配置文件（server_config.py）只在 workspace 目录下
 # 非敏感文件（i18n.js, mobile.html 等）从脚本目录提供
 _config_paths = [
-    '/root/.openclaw/workspace',  # workspace 目录（配置文件位置）
+    os.path.expanduser('~/.openclaw/workspace'),  # 用户 workspace 目录（配置文件位置）
     os.path.dirname(os.path.realpath(__file__)),  # 脚本所在目录 (openclaw-mobile-release)
 ]
 for _path in _config_paths:
@@ -1110,8 +1110,15 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
     def _handle_models(self):
         """处理模型列表请求 - 从 Gateway 配置动态获取"""
         try:
-            # 从 Gateway 配置文件读取模型列表
-            config_path = '/root/.openclaw/openclaw.json'
+            # 根据 WORKSPACE_DIR 推断配置文件路径
+            # WORKSPACE_DIR = /home/user/.openclaw/workspace
+            # 配置文件 = /home/user/.openclaw/openclaw.json
+            openclaw_dir = os.path.dirname(WORKSPACE_DIR)
+            config_path = os.path.join(openclaw_dir, 'openclaw.json')
+            
+            if not os.path.exists(config_path):
+                raise FileNotFoundError(f"配置文件不存在: {config_path}")
+            
             models = []
             
             with open(config_path, 'r') as f:
