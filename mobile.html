@@ -130,6 +130,10 @@
     .input-wrap { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.95); padding: 6px 8px; padding-bottom: calc(6px + env(safe-area-inset-bottom,0)); border-top: .5px solid rgba(255,255,255,.1); z-index: 100; }
     .input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
     .input-row:last-child { margin-bottom: 0; }
+    /* 第一行按钮布局：快捷按钮固定宽度，模型选择器占满剩余空间，图片/文件按钮固定宽度 */
+    .input-row:first-child .qa-btn { flex-shrink: 0; }
+    .input-row:first-child .model-selector { flex: 1; min-width: 0; }
+    .input-row:first-child .img-btn { flex-shrink: 0; }
   
   /* 快捷工具面板（可展开/收起） */
   .quick-panel {
@@ -346,22 +350,132 @@
     margin: 0 4px;
   }
   
-  .qa-select {
-    padding: 6px 8px;
-    background: rgba(58,58,60,0.6);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px;
-    color: var(--text);
-    font-size: 10px;
-    cursor: pointer;
-    flex-shrink: 0;
-    min-width: 80px;
-    height: 32px;
-    outline: none;
+  /* 模型选择器 - 自定义下拉菜单 */
+  .model-selector {
+    position: relative;
+    flex: 1;
+    min-width: 0;
   }
   
-  .qa-select:hover {
+  .model-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(58,58,60,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
+    height: 32px;
+    transition: all 0.15s;
+  }
+  
+  .model-btn:hover {
     border-color: rgba(255,255,255,0.2);
+    background: rgba(58,58,60,0.8);
+  }
+  
+  .model-btn.active {
+    border-color: var(--accent);
+  }
+  
+  .model-btn .btn-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  .model-btn .model-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .model-btn .arrow {
+    font-size: 9px;
+    opacity: 0.7;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  
+  .model-btn.active .arrow {
+    transform: rotate(180deg);
+  }
+  
+  .model-menu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: rgba(30,30,30,0.98);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 180px;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    z-index: 1001;
+    display: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .model-menu.show {
+    display: block;
+  }
+  
+  .model-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  
+  .model-menu-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  
+  .model-menu-item:active {
+    background: var(--accent);
+  }
+  
+  .model-menu-item.selected {
+    color: var(--accent);
+  }
+  
+  .model-menu-item .check {
+    opacity: 0;
+    font-size: 14px;
+  }
+  
+  .model-menu-item.selected .check {
+    opacity: 1;
+  }
+  
+  .model-menu-item .model-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+  
+  .model-menu-item .model-provider {
+    font-size: 10px;
+    opacity: 0.5;
+    flex-shrink: 0;
   }
   
   /* 下拉菜单 */
@@ -506,9 +620,15 @@
           <span class="qa-text">快捷</span>
         </button>
         
-        <select class="qa-select" id="modelSelect" onchange="switchModel(this.value)">
-          <option value="">🔄 模型</option>
-        </select>
+        <div class="model-selector">
+          <button class="model-btn" id="modelBtn" onclick="toggleModelMenu()">
+            <div class="btn-content">
+              <span id="modelBtnText" class="model-text">🔄 模型</span>
+            </div>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="model-menu" id="modelMenu"></div>
+        </div>
         
         <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
         <input type="file" id="fileInput" accept="*" onchange="handleFileSelect()" style="display:none">
@@ -726,11 +846,19 @@
     
     // 点击其他地方关闭面板
     document.addEventListener('click', function(e) {
+      // 关闭快捷面板
       const panel = e.target.closest('.quick-panel');
       const btn = e.target.closest('.qa-btn');
       if (!panel && !btn) {
         const quickPanel = document.getElementById('quickPanel');
         if (quickPanel) quickPanel.style.display = 'none';
+      }
+      
+      // 关闭模型菜单
+      const modelMenu = e.target.closest('.model-menu');
+      const modelBtn = e.target.closest('.model-btn');
+      if (!modelMenu && !modelBtn) {
+        closeModelMenu();
       }
     });
     
@@ -2400,6 +2528,22 @@
     // 移除已选择的图片
     function removeImg() { clearImages(); }
 
+    // 切换模型菜单显示/隐藏
+    function toggleModelMenu() {
+      const menu = document.getElementById('modelMenu');
+      const btn = document.getElementById('modelBtn');
+      menu.classList.toggle('show');
+      btn.classList.toggle('active');
+    }
+    
+    // 关闭模型菜单
+    function closeModelMenu() {
+      const menu = document.getElementById('modelMenu');
+      const btn = document.getElementById('modelBtn');
+      menu.classList.remove('show');
+      btn.classList.remove('active');
+    }
+    
     // 加载模型列表
     async function loadModels() {
       try {
@@ -2407,40 +2551,74 @@
         const data = await resp.json();
         
         if (data.models) {
-          const select = document.getElementById('modelSelect');
-          select.innerHTML = '<option value="">🔄 切换模型</option>';
+          const menu = document.getElementById('modelMenu');
+          const btnText = document.getElementById('modelBtnText');
           
-          // 获取当前模型 - 只从 localStorage 读取，不依赖 API 返回的 current
-          // 因为 API 的 current 可能是全局默认值，不是用户选择的
+          // 获取当前模型 - 只从 localStorage 读取
           let currentModel = localStorage.getItem('current_model') || '';
           
-          // 如果 localStorage 为空，使用 API 返回的 current 作为初始值
           if (!currentModel && data.current) {
             currentModel = data.current;
-            // 但不保存到 localStorage，让用户明确知道这是默认值
             console.log('使用默认模型:', currentModel);
           }
           
           console.log('当前模型:', currentModel);
-          console.log('localStorage:', localStorage.getItem('current_model'));
-          console.log('data.current:', data.current);
+          
+          // 构建菜单 HTML
+          let html = '';
+          let currentName = '🔄 模型';
           
           data.models.forEach(model => {
             const modelId = model.id || model;
             const modelName = model.name || model;
             const isCurrent = modelId === currentModel;
-            // 只使用 selected 属性标识当前模型，浏览器会自动显示选中标记
-            select.innerHTML += `<option value="${modelId}" ${isCurrent ? 'selected' : ''}>${modelName}</option>`;
+            
+            // 解析模型名称和提供商
+            let displayName = modelName;
+            let provider = '';
+            const match = modelName.match(/^(.+?)\s*\(([^)]+)\)$/);
+            if (match) {
+              displayName = match[1].trim();
+              provider = match[2];
+            }
+            
+            if (isCurrent) {
+              currentName = displayName;
+            }
+            
+            html += `
+              <div class="model-menu-item ${isCurrent ? 'selected' : ''}" onclick="selectModel('${modelId}')">
+                <span class="model-name">${displayName}</span>
+                ${provider ? `<span class="model-provider">(${provider})</span>` : ''}
+                <span class="check">✓</span>
+              </div>
+            `;
           });
           
-          // 更新下拉框显示文本
-          if (currentModel && select.selectedIndex > 0) {
-            select.title = '当前模型：' + select.options[select.selectedIndex].text;
+          menu.innerHTML = html;
+          
+          // 更新按钮文本 - 只显示模型名称，不显示提供商
+          let shortName = currentName;
+          const match = currentName.match(/^(.+?)\s*\(([^)]+)\)$/);
+          if (match) {
+            shortName = match[1].trim();
+          }
+          btnText.textContent = shortName || '🔄 模型';
+          
+          // 更新按钮标题
+          if (currentModel) {
+            document.getElementById('modelBtn').title = '当前模型：' + currentName;
           }
         }
       } catch (e) {
         console.error('加载模型列表失败:', e);
       }
+    }
+    
+    // 选择模型
+    function selectModel(modelId) {
+      closeModelMenu();
+      switchModel(modelId);
     }
 
     
