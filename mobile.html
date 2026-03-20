@@ -58,7 +58,7 @@
     }
     .lang-btn:active { transform: scale(0.9); background: var(--bg4); }
     
-    .chat { position: absolute; top: var(--safe-top); bottom: var(--input-height); left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 12px; padding-bottom: 20px; -webkit-overflow-scrolling: touch; } 
+    .chat { position: absolute; top: var(--safe-top); bottom: 0; left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 12px; padding-bottom: calc(var(--input-height) + 30px); -webkit-overflow-scrolling: touch; } 
     
     .msg { display: flex; gap: 8px; margin-bottom: 12px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
     @keyframes in { from { opacity: 0; transform: translateY(8px); } }
@@ -127,8 +127,8 @@
     .streaming .thinking-icon { animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
     
-    .input-wrap { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.95); padding: 6px 8px; padding-bottom: calc(6px + env(safe-area-inset-bottom,0)); border-top: .5px solid rgba(255,255,255,.1); z-index: 100; }
-    .input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .input-wrap { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom,0px)); border-top: .5px solid rgba(255,255,255,.08); z-index: 100; }
+    .input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
     .input-row:last-child { margin-bottom: 0; }
     /* 第一行按钮布局：快捷按钮固定宽度，模型选择器占满剩余空间，图片/文件按钮固定宽度 */
     .input-row:first-child .qa-btn { flex-shrink: 0; }
@@ -138,7 +138,7 @@
   /* 快捷工具面板（可展开/收起） */
   .quick-panel {
     position: absolute;
-    bottom: 52px;
+    bottom: 60px;
     left: 12px;
     right: 12px;
     background: rgba(44,44,46,0.98);
@@ -193,18 +193,19 @@
     font-size: 10px;
     color: var(--text2);
   }
-    .input { flex: 1; background: var(--bg3); border-radius: 18px; padding: 10px 16px; font-size: 16px; color: var(--text); border: none; outline: none; -webkit-appearance: none; }
-    .send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .send:active { transform: scale(.92); }
-    .send:disabled { background: var(--bg3); }
+    .input { flex: 1; background: var(--bg2); border-radius: 22px; padding: 10px 16px; font-size: 16px; color: var(--text); border: 1px solid rgba(255,255,255,0.08); outline: none; -webkit-appearance: none; resize: none; max-height: 120px; line-height: 1.5; transition: border-color 0.2s, box-shadow 0.2s; min-height: 44px; }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,132,255,0.15); }
+    .send { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+    .send:active { transform: scale(.9); background: #0070e0; }
+    .send:disabled { background: var(--bg4); }
     
     /* 图片按钮 */
-    .img-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); border: none; color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .img-btn:active { transform: scale(.92); }
+    .img-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(58,58,60,0.7); border: 1px solid rgba(255,255,255,0.08); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+    .img-btn:active { transform: scale(.92); background: var(--bg4); }
     #imgInput { display: none; }
     
     /* 图片预览 - 支持多图（单独一行，固定在输入区域上方） */
-    .img-preview { display: none; position: fixed; bottom: 90px; left: 0; right: 0; width: 100%; padding: 8px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; background: rgba(28,28,30,.95); border-top: .5px solid rgba(255,255,255,.1); z-index: 99; }
+    .img-preview { display: none; position: fixed; bottom: 100px; left: 0; right: 0; width: 100%; padding: 8px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; background: rgba(28,28,30,.98); backdrop-filter: blur(20px); border-top: .5px solid rgba(255,255,255,.08); z-index: 99; }
     .img-preview.has-img { display: flex; align-items: center; gap: 8px; }
     .img-preview .img-list { display: flex; gap: 8px; flex-shrink: 0; }
     .img-preview .img-item { position: relative; flex-shrink: 0; }
@@ -213,7 +214,7 @@
     .img-preview .img-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
     
     /* 文件预览（单独一行，固定在输入区域上方） */
-    .file-preview { display: none; position: fixed; bottom: 90px; left: 0; right: 0; width: 100%; padding: 8px 12px; background: rgba(28,28,30,.95); border-top: .5px solid rgba(255,255,255,.1); z-index: 99; }
+    .file-preview { display: none; position: fixed; bottom: 100px; left: 0; right: 0; width: 100%; padding: 8px 12px; background: rgba(28,28,30,.98); backdrop-filter: blur(20px); border-top: .5px solid rgba(255,255,255,.08); z-index: 99; }
     .file-preview.has-file { display: flex; align-items: center; gap: 8px; }
     .file-preview .file-list { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
     .file-preview .file-item { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg3); border-radius: 8px; border: 1px solid var(--bg4); }
@@ -301,18 +302,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 1px;
-    padding: 4px 6px;
-    background: rgba(58,58,60,0.6);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 6px;
+    gap: 2px;
+    padding: 6px 10px;
+    background: rgba(58,58,60,0.7);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
     color: var(--text);
-    font-size: 9px;
+    font-size: 10px;
     cursor: pointer;
     transition: all 0.15s ease;
     flex-shrink: 0;
-    min-width: 48px;
-    height: 32px;
+    min-width: 52px;
+    height: 40px;
   }
   
   .qa-btn:hover {
@@ -328,12 +329,12 @@
   }
   
   .qa-icon {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
   }
   
   .qa-text {
-    font-size: 8px;
+    font-size: 9px;
     color: var(--text2);
     font-weight: 500;
   }
@@ -361,26 +362,31 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
-    padding: 6px 10px;
-    background: rgba(58,58,60,0.6);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(58,58,60,0.7);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
     color: var(--text);
-    font-size: 12px;
+    font-size: 13px;
     cursor: pointer;
     width: 100%;
-    height: 32px;
+    height: 40px;
     transition: all 0.15s;
   }
   
   .model-btn:hover {
-    border-color: rgba(255,255,255,0.2);
-    background: rgba(58,58,60,0.8);
+    border-color: rgba(255,255,255,0.25);
+    background: rgba(58,58,60,0.85);
   }
   
   .model-btn.active {
     border-color: var(--accent);
+  }
+  
+  .model-btn.loading {
+    opacity: 0.7;
+    animation: pulse 1.5s infinite;
   }
   
   .model-btn .btn-content {
@@ -453,11 +459,18 @@
   
   .model-menu-item.selected {
     color: var(--accent);
+    background: rgba(10, 132, 255, 0.15);
+  }
+  
+  .model-menu-item.selected:hover {
+    background: rgba(10, 132, 255, 0.25);
   }
   
   .model-menu-item .check {
     opacity: 0;
     font-size: 14px;
+    width: 20px;
+    text-align: center;
   }
   
   .model-menu-item.selected .check {
@@ -638,7 +651,7 @@
       
       <!-- 第二行：输入框 -->
       <div class="input-row">
-        <input type="text" class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息..." enterkeyhint="send">
+        <textarea class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息... (Shift+Enter 换行)" rows="1" enterkeyhint="send"></textarea>
         <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
       </div>
     </div>
@@ -2203,6 +2216,7 @@
       }
       
       input.value = '';
+      resetInputHeight(); // 重置输入框高度
       clearImages(); // 清除所有图片
       clearFiles(); // 清除所有文件
       document.getElementById('sendBtn').disabled = true;
@@ -2368,9 +2382,46 @@
       document.body.appendChild(overlay);
     }
 
-    document.getElementById('msgInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+    // 输入框多行支持
+    const msgInput = document.getElementById('msgInput');
+    const inputWrap = document.querySelector('.input-wrap');
+    const chatArea = document.getElementById('chatArea');
+    
+    // 自动调整高度并同步聊天区域
+    function autoResize() {
+      msgInput.style.height = 'auto';
+      const newHeight = Math.min(msgInput.scrollHeight, 120);
+      msgInput.style.height = newHeight + 'px';
+      msgInput.style.overflowY = msgInput.scrollHeight > 120 ? 'auto' : 'hidden';
+      
+      // 同步更新聊天区域的底部 padding
+      const inputWrapHeight = inputWrap.offsetHeight;
+      document.documentElement.style.setProperty('--input-height', inputWrapHeight + 'px');
+    }
+    
+    // 重置输入框高度（发送消息后）
+    function resetInputHeight() {
+      msgInput.style.height = 'auto';
+      msgInput.rows = 1;
+      autoResize();
+    }
+    
+    // 监听输入事件，自动调整高度
+    msgInput.addEventListener('input', autoResize);
+    
+    // Enter 发送，Shift+Enter 换行
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        sendMsg(); 
+      }
     });
+    
+    // 监听窗口大小变化，重新计算
+    window.addEventListener('resize', autoResize);
+    
+    // 初始化高度
+    setTimeout(autoResize, 100);
     
     
     // 图片选择处理 - 支持多图（最多 9 张）
@@ -2546,13 +2597,19 @@
     
     // 加载模型列表
     async function loadModels() {
+      const modelBtn = document.getElementById('modelBtn');
+      const btnText = document.getElementById('modelBtnText');
+      
+      // 显示加载状态
+      modelBtn.classList.add('loading');
+      btnText.textContent = '🔄 加载中...';
+      
       try {
         const resp = await fetch('/api/models');
         const data = await resp.json();
         
         if (data.models) {
           const menu = document.getElementById('modelMenu');
-          const btnText = document.getElementById('modelBtnText');
           
           // 获取当前模型 - 只从 localStorage 读取
           let currentModel = localStorage.getItem('current_model') || '';
@@ -2607,11 +2664,15 @@
           
           // 更新按钮标题
           if (currentModel) {
-            document.getElementById('modelBtn').title = '当前模型：' + currentName;
+            modelBtn.title = '当前模型：' + currentName;
           }
         }
       } catch (e) {
         console.error('加载模型列表失败:', e);
+        btnText.textContent = '⚠️ 加载失败';
+      } finally {
+        // 移除加载状态
+        modelBtn.classList.remove('loading');
       }
     }
     
@@ -2993,6 +3054,16 @@
       if (typeof i18n !== 'undefined') {
         i18n.init();
       }
+      
+      // 初始化输入框高度
+      setTimeout(() => {
+        const msgInput = document.getElementById('msgInput');
+        if (msgInput) {
+          msgInput.style.height = 'auto';
+          const newHeight = Math.min(msgInput.scrollHeight, 120);
+          msgInput.style.height = Math.max(newHeight, 44) + 'px';
+        }
+      }, 100);
     });
   </script>
   <script src="i18n.js"></script>
