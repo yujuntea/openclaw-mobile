@@ -1,3 +1,10 @@
+<!--
+  Copyright (c) 2026 OpenClaw Mobile Contributors
+  
+  This file is part of OpenClaw Mobile.
+  Licensed under the MIT License.
+-->
+
 # PR Review 自动处理测试
 
 这个文件用于测试 GitHub PR Review 自动处理工具。
