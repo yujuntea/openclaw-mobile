@@ -20,6 +20,9 @@
 
 ## 测试用例
 
+<!-- Comment ID: 2978629597 - E2E test documentation added -->
+This section contains comprehensive E2E (End-to-End) test scenarios that validate the complete PR review auto-processing workflow.
+
 ### 用例 1: 自动检测 Review Comments
 - **输入**: PR 包含 review comments
 - **预期输出**: 工具自动检测到所有未解决的 comments
