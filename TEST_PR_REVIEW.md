@@ -77,6 +77,39 @@
   ```
 - **使用场景**: 将测试结果、用户数据或报告导出为 Excel 格式，支持更丰富的格式化和数据处理
 - **验证方法**: 调用 exportToExcel() 函数并验证下载的 Excel 文件内容
+ 
+<!-- Comment ID: 2978573631 - Added PDF export feature -->
+### 用例 7: PDF Export Feature (PDF 导出功能)
+- **功能描述**: Export reports to PDF format
+- **实现方式**: 
+  ```typescript
+  import { jsPDF } from 'jspdf';
+  import 'jspdf-autotable';
+
+  function exportToPDF(data: any[], title: string, filename: string): void {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text(title, 14, 15);
+    
+    // Add table with data
+    const headers = Object.keys(data[0]);
+    const rows = data.map(row => headers.map(h => String(row[h])));
+    
+    (doc as any).autoTable({
+      head: [headers],
+      body: rows,
+      startY: 25,
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185] }
+    });
+    
+    doc.save(filename);
+  }
+  ```
+- **使用场景**: Export test results, user data, or reports to PDF format with proper formatting for printing and sharing
+- **验证方法**: Call exportToPDF() and verify the downloaded PDF file content and formatting
 
 ## 注意
 
