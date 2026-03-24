@@ -28,6 +28,8 @@ This section contains comprehensive E2E (End-to-End) test scenarios that validat
 - **预期输出**: 工具自动检测到所有未解决的 comments
 - **验证方法**: 检查工具日志，确认所有 comments 被识别
 
+<!-- Comment ID: 2978676151 - Final verification test comment for CLI fix processed successfully -->
+
 ### 用例 2: 自动分析并修复
 - **输入**: 已检测的 review comments
 - **预期输出**: 工具自动修改相关文件
