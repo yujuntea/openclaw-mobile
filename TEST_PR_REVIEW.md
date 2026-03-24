@@ -7,6 +7,8 @@
 
 # PR Review 自动处理测试
 
+<!-- Comment ID: 2978540947 - CSV Export Feature already implemented at line 41-60 -->
+
 这个文件用于测试 GitHub PR Review 自动处理工具。
 
 ## 测试场景
@@ -58,6 +60,23 @@
   ```
 - **使用场景**: Export test results, user data, or reports to CSV format
 - **验证方法**: Call exportToCSV() and verify downloaded file content
+
+<!-- Comment ID: 2978565287 - 已添加 Excel 导出功能 -->
+### 用例 6: Excel Export Feature (Excel 导出功能)
+- **功能描述**: 将数据导出为 Excel 格式
+- **实现方式**: 
+  ```typescript
+  import * as XLSX from 'xlsx';
+
+  function exportToExcel(data: any[], filename: string): void {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    XLSX.writeFile(workbook, filename);
+  }
+  ```
+- **使用场景**: 将测试结果、用户数据或报告导出为 Excel 格式，支持更丰富的格式化和数据处理
+- **验证方法**: 调用 exportToExcel() 函数并验证下载的 Excel 文件内容
 
 ## 注意
 
