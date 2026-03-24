@@ -111,6 +111,39 @@
 - **使用场景**: Export test results, user data, or reports to PDF format with proper formatting for printing and sharing
 - **验证方法**: Call exportToPDF() and verify the downloaded PDF file content and formatting
 
+<!-- Comment ID: 2978578667 - Added XML export support -->
+### 用例 8: XML Export Feature (XML 导出功能)
+- **功能描述**: Export data to XML format for data interchange
+- **实现方式**: 
+  ```typescript
+  function exportToXML(data: any[], rootElement: string, filename: string): void {
+    let xmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xmlContent += `<${rootElement}>\n`;
+    
+    data.forEach(item => {
+      xmlContent += '  <item>\n';
+      Object.keys(item).forEach(key => {
+        const value = String(item[key]).replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+        xmlContent += `    <${key}>${value}</${key}>\n`;
+      });
+      xmlContent += '  </item>\n';
+    });
+    
+    xmlContent += `</${rootElement}>`;
+    
+    const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  }
+  ```
+- **使用场景**: Export data to XML format for data interchange with external systems, APIs, or legacy integrations
+- **验证方法**: Call exportToXML() and verify the downloaded XML file content and structure
+
 ## 注意
 
 这是一个测试文件，测试完成后可以删除。
