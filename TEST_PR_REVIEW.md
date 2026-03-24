@@ -38,6 +38,27 @@
 - **预期输出**: 自动 commit 并 push
 - **验证方法**: 检查 git commit 历史和 PR 评论
 
+### 用例 5: CSV Export Feature
+- **功能描述**: Export data to CSV format
+- **实现方式**: 
+  ```typescript
+  function exportToCSV(data: any[], filename: string): void {
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => headers.map(h => row[h]).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  }
+  ```
+- **使用场景**: Export test results, user data, or reports to CSV format
+- **验证方法**: Call exportToCSV() and verify downloaded file content
+
 ## 注意
 
 这是一个测试文件，测试完成后可以删除。
