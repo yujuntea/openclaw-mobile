@@ -42,6 +42,8 @@ const i18n = {
       // 菜单
       menuTitle: '📋 菜单',
       chatSection: '聊天',
+      sessionList: '会话列表',
+      sessionListDesc: '最近24小时的会话',
       currentSession: '当前会话',
       fileSection: '文件浏览',
       rootDir: '根目录',
@@ -114,6 +116,8 @@ const i18n = {
       // Menu
       menuTitle: '📋 Menu',
       chatSection: 'Chat',
+      sessionList: 'Session List',
+      sessionListDesc: 'Sessions in last 24 hours',
       currentSession: 'Current session',
       fileSection: 'File Browser',
       rootDir: 'Root',
