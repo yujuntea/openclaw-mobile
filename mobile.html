@@ -249,7 +249,7 @@
     align-items: center;
     justify-content: center;
   }
-  .modal.show { display: flex; }
+  .modal.show { display: flex !important; }
   .modal-content {
     background: var(--bg1);
     border-radius: 16px;
@@ -565,6 +565,23 @@
     </div>
   </div>
   
+  <!-- 会话列表模态框 -->
+  <div id="sessionListModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="login-header">
+        <span class="login-icon">📋</span>
+        <h2>会话列表</h2>
+        <button onclick="hideSessionList()" style="position: absolute; right: 16px; top: 16px; background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      
+      <div id="sessionListContent" style="max-height: 60vh; overflow-y: auto; padding: 8px;">
+        <div style="text-align: center; color: var(--text2); padding: 20px;">
+          加载中...
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <div class="login" id="login">
     <div class="login-emoji">🤖</div>
     <div class="login-title" data-i18n="appName">小强 AI</div>
@@ -664,6 +681,13 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="chatSection">聊天</div>
+        <a href="javascript:void(0)" class="nav-link" onclick="showSessionList(); closeNav();">
+          <span class="icon">📋</span>
+          <div>
+            <div class="text" data-i18n="sessionList">会话列表</div>
+            <div class="desc" data-i18n="sessionListDesc">最近24小时的会话</div>
+          </div>
+        </a>
         <a href="javascript:void(0)" class="nav-link" onclick="closeNav();">
           <span class="icon">💬</span>
           <div>
@@ -675,21 +699,21 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="fileSection">文件浏览</div>
-        <a href="/browse/" class="nav-link">
+        <a href="/browse/" class="nav-link" onclick="handleBrowseClick(event, '/browse/')">
           <span class="icon">📁</span>
           <div>
             <div class="text" data-i18n="rootDir">根目录</div>
             <div class="desc" data-i18n="rootDirDesc">浏览所有文件</div>
           </div>
         </a>
-        <a href="/browse/media" class="nav-link">
+        <a href="/browse/media" class="nav-link" onclick="handleBrowseClick(event, '/browse/media')">
           <span class="icon">🖼️</span>
           <div>
             <div class="text" data-i18n="mediaDir">Media 文件</div>
             <div class="desc" data-i18n="mediaDirDesc">截图、图片、视频</div>
           </div>
         </a>
-        <a href="/browse/workspace" class="nav-link">
+        <a href="/browse/workspace" class="nav-link" onclick="handleBrowseClick(event, '/browse/workspace')">
           <span class="icon">📂</span>
           <div>
             <div class="text" data-i18n="workspaceDir">Workspace</div>
@@ -744,7 +768,8 @@
     // 强制使用 /api 代理和正确的session key（与Dashboard共享）
     let gateway = '/api';
     let authToken = ''; // 将在页面加载时从 config.js 初始化
-    let sessionKey = 'agent:main:main';
+    function getSessionKeyFromURL() { const url = new URL(window.location.href); return url.searchParams.get('session') || 'agent:main:main'; }
+    let sessionKey = getSessionKeyFromURL();
     let selectedImages = []; // 存储选中的图片 [{file, base64, id}]
     let selectedFiles = []; // 存储选中的文件 [{file, serverPath, id, name, size, type}]
     let gwClient = null; // WebSocket 客户端
@@ -759,13 +784,14 @@
     
     // 检查 Session 是否有效
     async function checkSessionAuth() {
-      const sessionToken = localStorage.getItem('session_token');
+      const sessionToken = localStorage.getItem('oc_session_token');
       if (!sessionToken) {
         return false;
       }
       
       try {
-        const resp = await fetch('/api/health', {
+        // 使用 /api/sessions 接口验证 session（需要认证）
+        const resp = await fetch('/api/sessions', {
           headers: {'Authorization': 'Bearer ' + sessionToken}
         });
         return resp.status !== 401;
@@ -775,11 +801,64 @@
       }
     }
     
+    // 验证 session 并尝试自动登录
+    async function ensureSessionAuth() {
+      const isValid = await checkSessionAuth();
+      if (isValid) {
+        return true;
+      }
+      
+      // Session 无效，尝试用保存的 gateway token 重新登录
+      const savedToken = localStorage.getItem('oc_gateway_token');
+      if (savedToken) {
+        console.log('Session 失效，尝试自动重新登录...');
+        try {
+          const resp = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token: savedToken})
+          });
+          
+          const data = await resp.json();
+          
+          if (data.success) {
+            localStorage.setItem('oc_session_token', data.token);
+            document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
+            console.log('✅ 自动重新登录成功');
+            return true;
+          }
+        } catch (e) {
+          console.error('自动重新登录失败:', e);
+        }
+      }
+      
+      // 无法自动登录，需要用户手动登录
+      return false;
+    }
+    
+    // 文件浏览链接点击处理
+    async function handleBrowseClick(event, path) {
+      event.preventDefault();
+      
+      // 检查 session 是否有效
+      const canProceed = await ensureSessionAuth();
+      
+      if (canProceed) {
+        // Session 有效，跳转到目标页面
+        window.location.href = path;
+      } else {
+        // 保存待跳转的路径
+        pendingBrowsePath = path;
+        // 需要登录，显示登录框
+        showSessionLoginModal();
+      }
+    }
+    
     // 显示 Session 登录模态框
     function showSessionLoginModal() {
       document.getElementById('sessionLoginModal').classList.add('show');
       // 自动填充保存的 token
-      const savedToken = localStorage.getItem('saved_gateway_token');
+      const savedToken = localStorage.getItem('oc_gateway_token');
       if (savedToken) {
         document.getElementById('sessionLoginToken').value = savedToken;
         document.getElementById('rememberToken').checked = true;
@@ -790,6 +869,124 @@
     function hideSessionLoginModal() {
       document.getElementById('sessionLoginModal').classList.remove('show');
     }
+    
+    // ========== 会话列表功能 ==========
+    
+    // 显示会话列表
+    async function showSessionList() {
+      console.log('[Sessions] showSessionList called');
+      const modal = document.getElementById('sessionListModal');
+      const content = document.getElementById('sessionListContent');
+      
+      modal.classList.add('show');
+      content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">加载中...</div>';
+      
+      try {
+        // 获取 session token
+        let sessionToken = localStorage.getItem('oc_session_token');
+        console.log('[Sessions] sessionToken from localStorage:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'null');
+        if (!sessionToken) {
+          sessionToken = getCookie('oc_session_token');
+          console.log('[Sessions] sessionToken from cookie:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'null');
+        }
+        
+        if (!sessionToken) {
+          content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">请先登录</div>';
+          return;
+        }
+        
+        console.log('[Sessions] Fetching sessions with token:', sessionToken.substring(0, 20) + '...');
+        const resp = await fetch('/api/sessions', {
+          headers: {'Authorization': 'Bearer ' + sessionToken}
+        });
+        
+        console.log('[Sessions] Response status:', resp.status);
+        
+        if (resp.status === 401) {
+          content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">登录已过期，请重新登录</div>';
+          return;
+        }
+        
+        const data = await resp.json();
+        console.log('[Sessions] Response data:', JSON.stringify(data).substring(0, 200));
+        
+        if (data.sessions && data.sessions.length > 0) {
+          let html = '';
+          for (const session of data.sessions) {
+            const time = formatSessionTime(session.updatedAt);
+            const isMain = session.isMain ? '<span style="color: var(--accent);">⭐</span>' : '';
+            const kind = session.kind || 'other';
+            const kindIcon = kind === 'main' ? '🏠' : kind === 'isolated' ? '🔒' : '📝';
+            
+            html += `
+              <div class="session-item" onclick="switchSession('${session.sessionKey}')" 
+                   style="padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; 
+                          background: var(--bg2); transition: background 0.2s;"
+                   onmouseover="this.style.background='var(--bg3)'"
+                   onmouseout="this.style.background='var(--bg2)'">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span>${kindIcon}</span>
+                  <span style="font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${isMain} ${session.sessionTitle || session.model || 'unknown'}
+                  </span>
+                  <span style="font-size: 12px; color: var(--text2);">${time}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${session.lastMessage || ''}
+                </div>
+              </div>
+            `;
+          }
+          content.innerHTML = html;
+        } else {
+          content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">最近24小时没有活跃会话</div>';
+        }
+      } catch (e) {
+        console.error('加载会话列表失败:', e);
+        content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">加载失败: ' + e.message + '</div>';
+      }
+    }
+    
+    // 隐藏会话列表
+    function hideSessionList() {
+      document.getElementById('sessionListModal').classList.remove('show');
+    }
+    
+    // 切换会话
+    function switchSession(sessionKey) {
+      console.log('[switchSession] Clicked sessionKey:', sessionKey);
+      
+      // 更新 URL 参数
+      const url = new URL(window.location);
+      url.searchParams.set('session', sessionKey);
+      console.log('[switchSession] New URL:', url.toString());
+      
+      window.location.href = url.toString();
+    }
+    
+    // 格式化会话时间
+    function formatSessionTime(timestamp) {
+      const now = Date.now();
+      const diff = now - timestamp;
+      
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+      return new Date(timestamp).toLocaleDateString();
+    }
+    
+    // 获取 Cookie
+    function getCookie(name) {
+      const value = '; ' + document.cookie;
+      const parts = value.split('; ' + name + '=');
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+    
+    // ========== 会话列表功能结束 ==========
+    
+    // 待跳转的路径（登录成功后自动跳转）
+    let pendingBrowsePath = null;
     
     // Session 登录
     async function doSessionLogin() {
@@ -812,17 +1009,26 @@
         
         if (data.success) {
           // 保存 session token
-          localStorage.setItem('session_token', data.token);
+          localStorage.setItem('oc_session_token', data.token);
+          // 同时设置 cookie，供页面跳转使用（如 /browse/）
+          document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
           
           // 保存 gateway token（如果勾选记住）
           if (remember) {
-            localStorage.setItem('saved_gateway_token', token);
+            localStorage.setItem('oc_gateway_token', token);
           } else {
-            localStorage.removeItem('saved_gateway_token');
+            localStorage.removeItem('oc_gateway_token');
           }
           
           // 隐藏登录框
           hideSessionLoginModal();
+          
+          // 如果有待跳转的路径，跳转过去
+          if (pendingBrowsePath) {
+            const path = pendingBrowsePath;
+            pendingBrowsePath = null;
+            window.location.href = path;
+          }
           
           return true;
         } else {
@@ -837,7 +1043,7 @@
     
     // 获取认证头
     function getAuthHeaders() {
-      const sessionToken = localStorage.getItem('session_token');
+      const sessionToken = localStorage.getItem('oc_session_token');
       const headers = {};
       if (sessionToken) {
         headers['Authorization'] = 'Bearer ' + sessionToken;
@@ -965,6 +1171,8 @@
     // ========== WebSocket 客户端实现 ==========
     class GatewayClient {
       constructor(url, token, sessionKey, onEvent, onConnect, onDisconnect) {
+        console.log('[GatewayClient] Constructor - sessionKey:', sessionKey);
+        
         this.url = url;
         this.token = token;
         this.sessionKey = sessionKey;
@@ -1196,7 +1404,7 @@
         authToken = window.getToken();
         console.log('[Mobile] Got token from config.js:', authToken ? authToken.substring(0, 10) + '...' : 'empty');
       } else {
-        authToken = localStorage.getItem('oc_token') || 'YOUR_GATEWAY_TOKEN_HERE';
+        authToken = localStorage.getItem('oc_gateway_token') || 'YOUR_GATEWAY_TOKEN_HERE';
         console.log('[Mobile] getToken not available, using localStorage:', authToken ? authToken.substring(0, 10) + '...' : 'empty');
       }
       
@@ -1235,8 +1443,8 @@
           console.log('[Mobile] Using fallback token from OPENCLAW_CONFIG');
         }
         // 如果还是没有，尝试从保存的 token 获取
-        if ((!authToken || authToken === 'YOUR_GATEWAY_TOKEN_HERE') && localStorage.getItem('saved_gateway_token')) {
-          authToken = localStorage.getItem('saved_gateway_token');
+        if ((!authToken || authToken === 'YOUR_GATEWAY_TOKEN_HERE') && localStorage.getItem('oc_gateway_token')) {
+          authToken = localStorage.getItem('oc_gateway_token');
           console.log('[Mobile] Using saved token from localStorage');
         }
       }
@@ -1246,7 +1454,7 @@
       // tokenInput 可编辑，用户可以修改
       
       // 如果有保存的 token，勾选"记住 Token"
-      if (localStorage.getItem('saved_gateway_token')) {
+      if (localStorage.getItem('oc_gateway_token')) {
         document.getElementById('rememberGatewayToken').checked = true;
       }
       
@@ -1288,7 +1496,7 @@
 
     // 历史消息存储（使用 localStorage）
     let messageHistory = [];
-    const HISTORY_KEY = 'oc_mobile_history';
+    const HISTORY_KEY = 'oc_history';
     const MAX_HISTORY = 100;
     
     // 登录状态存储
@@ -1455,14 +1663,14 @@
       // 记住 Token 功能
       const rememberGatewayToken = document.getElementById('rememberGatewayToken').checked;
       if (rememberGatewayToken) {
-        localStorage.setItem('saved_gateway_token', authToken);
+        localStorage.setItem('oc_gateway_token', authToken);
       } else {
-        localStorage.removeItem('saved_gateway_token');
+        localStorage.removeItem('oc_gateway_token');
       }
       
       // 保存登录状态（1小时有效期）
       saveLoginState(wsUrl, authToken, sessionKey);
-      localStorage.setItem('oc_token', authToken);
+      localStorage.setItem('oc_gateway_token', authToken);
       document.getElementById('sessionInfo').textContent = sessionKey;
       
       // 进入聊天界面
@@ -1491,7 +1699,9 @@
         const data = await resp.json();
         
         if (data.success) {
-          localStorage.setItem('session_token', data.token);
+          localStorage.setItem('oc_session_token', data.token);
+          // 同时设置 cookie，供页面跳转使用（如 /browse/）
+          document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
           console.log('✅ Session 登录成功');
         } else {
           console.warn('⚠️ Session 登录失败:', data.error);
@@ -1505,17 +1715,29 @@
     function autoLogin() {
       const state = getLoginState();
       if (!state) {
-        console.log('No valid login state, showing login page');
+        console.log('[AutoLogin] No valid login state, showing login page');
         return false;
       }
       
-      console.log('Found valid login state, auto-connecting...');
+      console.log('[AutoLogin] Found valid login state, auto-connecting...');
+      console.log('[AutoLogin] Saved state:', { wsUrl: state.wsUrl, sessionKey: state.sessionKey });
       
       // 使用保存的状态
       authToken = state.token;
-      sessionKey = state.sessionKey;
       
-      localStorage.setItem('oc_token', authToken);
+      // 优先使用 URL 参数中的 sessionKey
+      const urlSessionKey = getSessionKeyFromURL();
+      console.log('[AutoLogin] URL sessionKey:', urlSessionKey);
+      
+      if (urlSessionKey) {
+        sessionKey = urlSessionKey;
+      } else {
+        sessionKey = state.sessionKey;
+      }
+      
+      console.log('[AutoLogin] Final sessionKey:', sessionKey);
+      
+      localStorage.setItem('oc_gateway_token', authToken);
       document.getElementById('sessionInfo').textContent = sessionKey;
       
       // 进入聊天界面
@@ -1525,7 +1747,11 @@
       // 加载模型列表
       loadModels();
       
+      // 保存更新后的登录状态（包含新的 sessionKey）
+      saveLoginState(state.wsUrl, authToken, sessionKey);
+      
       // 建立 WebSocket 连接
+      console.log('[AutoLogin] Calling connectWebSocket with wsUrl:', state.wsUrl);
       connectWebSocket(state.wsUrl);
       
       return true;
@@ -1665,7 +1891,7 @@
         console.error('加载历史消息失败:', e);
         // 如果获取失败，尝试从本地存储加载
         try {
-          const localHistory = JSON.parse(localStorage.getItem('oc_mobile_history') || '[]');
+          const localHistory = JSON.parse(localStorage.getItem('oc_history') || '[]');
           chatArea.innerHTML = '';
           if (localHistory.length > 0) {
             for (const msg of localHistory.slice(-50)) {
@@ -2486,9 +2712,11 @@
     
     // 上传图片到服务器
     async function uploadImage(imgBase64) {
+      const headers = getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       const response = await fetch(window.location.origin + '/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ image: imgBase64 })
       });
       
@@ -2786,9 +3014,11 @@
     
     // 上传文件到服务器
     async function uploadFile(fileBase64, filename, mimeType) {
+      const headers = getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       const response = await fetch(window.location.origin + '/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ 
           file: fileBase64, 
           filename: filename,

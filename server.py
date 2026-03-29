@@ -27,40 +27,40 @@ class SessionManager:
     """Session 管理器 - 用于用户认证"""
     
     def __init__(self):
-        self.sessions = {}  # session_token -> session_data
+        self.sessions = {}  # oc_session_token -> session_data
         self.token_lifetime = 3600 * 24  # 24小时有效期
     
     def create_session(self, gateway_token, client_ip):
         """创建新 session"""
-        session_token = secrets.token_urlsafe(32)
-        self.sessions[session_token] = {
+        oc_session_token = secrets.token_urlsafe(32)
+        self.sessions[oc_session_token] = {
             'created_at': time.time(),
             'gateway_token': gateway_token,
             'ip': client_ip,
             'last_used': time.time(),
         }
-        return session_token
+        return oc_session_token
     
-    def verify_session(self, session_token, client_ip):
+    def verify_session(self, oc_session_token, client_ip):
         """验证 session 是否有效"""
-        if not session_token or session_token not in self.sessions:
+        if not oc_session_token or oc_session_token not in self.sessions:
             return False
         
-        session = self.sessions[session_token]
+        session = self.sessions[oc_session_token]
         
         # 检查是否过期
         if time.time() - session['created_at'] > self.token_lifetime:
-            del self.sessions[session_token]
+            del self.sessions[oc_session_token]
             return False
         
         # 更新最后使用时间
         session['last_used'] = time.time()
         return True
     
-    def get_gateway_token(self, session_token):
+    def get_gateway_token(self, oc_session_token):
         """获取 session 对应的 gateway token"""
-        if session_token in self.sessions:
-            return self.sessions[session_token]['gateway_token']
+        if oc_session_token in self.sessions:
+            return self.sessions[oc_session_token]['gateway_token']
         return None
     
     def cleanup_expired(self):
@@ -95,9 +95,9 @@ try:
         INBOUND_DIR, DASHBOARD_DIR,
         REQUEST_TIMEOUT, MAX_REQUEST_SIZE, BROWSABLE_DIRS
     )
-    print(f"[Config] Loaded from server_config.py: BIND_HOST={BIND_HOST}")
+    import sys; sys.stderr.write(f"[Config] Loaded from server_config.py: BIND_HOST={BIND_HOST}")
 except ImportError as e:
-    print(f"[Config] server_config.py not found, using defaults: {e}")
+    import sys; sys.stderr.write(f"[Config] server_config.py not found, using defaults: {e}")
     # 如果没有配置文件，使用默认值
     PORT = 8080
     BIND_HOST = '127.0.0.1'  # 默认仅本机访问（安全）
@@ -137,11 +137,12 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         '/media/',
         '/api/upload',
         '/api/command',
+        '/api/sessions',
     ]
     
     # 公开路径（不需要认证）
     PUBLIC_PATHS = [
-        '/',
+        ## '/' removed - matches all paths! # FIXED
         '/mobile.html',
         '/config.js',
         '/i18n.js',
@@ -155,7 +156,9 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
     
     def log_message(self, format, *args):
         """自定义日志格式"""
-        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {self.address_string()} - {format % args}")
+        import sys
+        sys.stderr.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {self.address_string()} - {format % args}\n")
+        sys.stderr.flush()
     
     def _get_cookie(self, name):
         """获取 cookie 值"""
@@ -180,21 +183,33 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         if not needs_auth:
             return True
         
-        # 获取 session token
+        # 获取 session token 或 gateway token
         auth_header = self.headers.get('Authorization', '')
         if auth_header.startswith('Bearer '):
-            session_token = auth_header[7:]
+            oc_session_token = auth_header[7:]
         else:
             # 也支持从 cookie 获取
-            session_token = self._get_cookie('session_token')
+            oc_session_token = self._get_cookie('oc_session_token')
         
         # 验证 session
         client_ip = self.client_address[0]
-        if session_token and session_manager.verify_session(session_token, client_ip):
+        self.log_message("[Auth] 验证 session: token=%s, ip=%s", oc_session_token[:20] if oc_session_token else 'None', client_ip)
+        if oc_session_token and session_manager.verify_session(oc_session_token, client_ip):
             # 保存 gateway_token 供后续使用
-            self.gateway_token = session_manager.get_gateway_token(session_token)
+            self.gateway_token = session_manager.get_gateway_token(oc_session_token)
+            self.log_message("[Auth] 验证成功")
             return True
         
+        # 也支持直接从 X-Gateway-Token 请求头获取
+        gateway_token = self.headers.get('X-Gateway-Token', '')
+        if gateway_token:
+            self.log_message("[Auth] 使用 X-Gateway-Token: %s", gateway_token[:20])
+            if self._verify_gateway_token(gateway_token):
+                self.gateway_token = gateway_token
+                self.log_message("[Auth] X-Gateway-Token 验证成功")
+                return True
+        
+        self.log_message("[Auth] 验证失败")
         # 未认证，返回 401
         self._send_json_response(401, {'error': 'Unauthorized', 'message': '请先登录'})
         return False
@@ -226,6 +241,13 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         # 模型列表 API（公开）
         if self.path == '/api/models':
             self._handle_models()
+            return
+        
+        # Sessions 列表 API（需要认证）
+        if self.path == '/api/sessions':
+            if not self._check_auth():
+                return
+            self._handle_sessions_list()
             return
         
         # API 代理
@@ -267,11 +289,15 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             # 直接调用 _serve_mobile_file
             relative_path = request_path[1:]  # 去掉开头的 /
             
-            # config.js 从 WORKSPACE_DIR 提供，其他文件从脚本目录提供
+            # 配置逻辑：
+            # - config.js: 从 workspace 目录读取（配置文件，用户可自定义）
+            # - i18n.js, mobile.html: 从脚本目录读取（工程文件）
+            # - screenshots: 从脚本目录读取
             if relative_path == 'config.js':
+                # config.js 从 workspace 目录提供（配置文件位置）
                 filepath = os.path.join(WORKSPACE_DIR, relative_path)
-                self.log_message("[Config] Serving config.js from WORKSPACE_DIR: %s", filepath)
             else:
+                # 其他文件从脚本目录提供
                 mobile_dir = os.path.dirname(os.path.realpath(__file__))
                 filepath = os.path.join(mobile_dir, relative_path)
             
@@ -987,19 +1013,91 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(response)
     
+    def _get_whitelist_tokens(self):
+        """从配置文件读取白名单 tokens
+        
+        搜索路径（按优先级）：
+        1. ~/.openclaw/workspace/config.js（配置文件推荐位置）
+        2. 工程目录/config.js（备选）
+        """
+        whitelist = []
+        
+        # 配置搜索路径
+        config_paths = [
+            os.path.join(WORKSPACE_DIR, 'config.js'),  # workspace 目录（推荐）
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.js')  # 工程目录
+        ]
+        
+        for config_path in config_paths:
+            try:
+                if os.path.exists(config_path):
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config_content = f.read()
+                    
+                    import re
+                    
+                    # 移除注释避免干扰
+                    config_clean = re.sub(r'//.*?$', '', config_content, flags=re.MULTILINE)
+                    config_clean = re.sub(r'/\*.*?\*/', '', config_clean, flags=re.DOTALL)
+                    
+                    # 匹配 defaultToken 格式
+                    match = re.search(r"defaultToken\s*:\s*['\"]([^'\"]+)['\"]", config_clean)
+                    if match:
+                        token = match.group(1)
+                        if token not in whitelist:
+                            whitelist.append(token)
+                            self.log_message("[Token验证] 从 %s 读取 token: %s", 
+                                           config_path, token[:10]+'...')
+                    else:
+                        self.log_message("[Token验证] %s 中未找到 defaultToken", 
+                                       os.path.basename(config_path))
+            except Exception as e:
+                self.log_message("[Token验证] 读取 %s 失败: %s", config_path, str(e))
+        
+        return whitelist
+        
+        return whitelist
+    
     def _verify_gateway_token(self, token):
-        """验证 Gateway token 是否有效"""
-        try:
-            req = urllib.request.Request(
-                f"{GATEWAY_HTTP}/api/status",
-                headers={'Authorization': f'Bearer {token}'},
-                method='GET'
-            )
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                return resp.status == 200
-        except Exception as e:
-            self.log_message("验证 Gateway token 失败: %s", str(e))
+        """验证 Gateway token 是否有效
+        
+        验证策略（按优先级）：
+        1. 白名单验证：从 config.js 读取有效 token
+        2. 格式验证：检查 token 格式是否合法
+        3. 长度检查：确保 token 长度合理
+        """
+        if not token:
+            self.log_message("[Token验证] Token 为空")
             return False
+        
+        # 长度检查：太短的 token 直接拒绝
+        if len(token) < 10:
+            self.log_message("[Token验证] Token 太短: %d 字符", len(token))
+            return False
+        
+        # 格式检查：只允许字母、数字、连字符、下划线
+        import re
+        if not re.match(r'^[a-zA-Z0-9_-]+$', token):
+            self.log_message("[Token验证] Token 包含非法字符")
+            return False
+        
+        # 白名单验证
+        whitelist = self._get_whitelist_tokens()
+        if token in whitelist:
+            self.log_message("[Token验证] ✅ Token 在白名单中")
+            return True
+        
+        # 如果不在白名单中，检查是否是常见的测试 token 模式
+        if token.startswith('test-') or token.startswith('mock-'):
+            self.log_message("[Token验证] ❌ 测试 token 被拒绝")
+            return False
+        
+        # 记录未授权的尝试（安全审计）
+        self.log_message("[Token验证] ⚠️ Token 不在白名单中，长度: %d, 前5位: %s", 
+                        len(token), token[:5])
+        
+        # 不在白名单中，默认拒绝（安全优先）
+        return False
     
     def _handle_login(self, content_length):
         """处理登录请求"""
@@ -1019,13 +1117,13 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             
             # 创建 session
             client_ip = self.client_address[0]
-            session_token = session_manager.create_session(gateway_token, client_ip)
+            oc_session_token = session_manager.create_session(gateway_token, client_ip)
             
             self.log_message("用户登录成功: IP=%s", client_ip)
             
             self._send_json_response(200, {
                 'success': True,
-                'token': session_token,
+                'token': oc_session_token,
                 'expires_in': 3600 * 24  # 24小时
             })
             
@@ -1065,6 +1163,167 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.log_message("命令执行错误: %s", str(e))
             self._send_json_response(500, {'error': str(e), 'message': '命令执行失败'})
+    
+    def _handle_sessions_list(self):
+        """处理 Sessions 列表请求 - 从本地文件获取最近24小时的会话"""
+        try:
+            # 验证登录 - 支持三种方式：
+            # 1. 从已登录的 session 获取 gateway_token（已通过 _check_auth 验证）
+            # 2. 从请求头 X-Gateway-Token 直接获取
+            # 3. 从 Authorization: Bearer oc_session_token 获取（由 _check_auth 设置）
+            
+            # 如果 gateway_token 已经通过 _check_auth 设置，直接使用
+            gateway_token = getattr(self, 'gateway_token', None)
+            
+            # 如果没有 gateway_token，尝试从 oc_session_token 获取
+            if not gateway_token:
+                auth_header = self.headers.get('Authorization', '')
+                if auth_header.startswith('Bearer '):
+                    oc_session_token = auth_header[7:]
+                    client_ip = self.client_address[0]
+                    if oc_session_token and session_manager.verify_session(oc_session_token, client_ip):
+                        gateway_token = session_manager.get_gateway_token(oc_session_token)
+                        self.log_message("[Sessions] 从 oc_session_token 获取 gateway_token 成功")
+            
+            # 如果还是没有，尝试从 X-Gateway-Token 获取
+            if not gateway_token:
+                gateway_token = self.headers.get('X-Gateway-Token', '')
+            
+            self.log_message("[Sessions] gateway_token present: %s, value: %s", bool(gateway_token), str(gateway_token)[:10]+'...' if gateway_token else 'N/A')
+            
+            if not gateway_token:
+                self._send_json_response(401, {'error': 'Not authenticated', 'message': '未认证'})
+                return
+            
+            # 调用 Gateway API 验证 token
+            if not self._verify_gateway_token(gateway_token):
+                self._send_json_response(401, {'error': 'Invalid token', 'message': 'Token 无效'})
+                return
+            
+            # 直接从文件系统读取 sessions.json 文件
+            self.log_message("[Sessions] 开始读取 sessions, agents_dir=%s", agents_dir if 'agents_dir' in locals() else os.path.join(os.path.dirname(WORKSPACE_DIR), 'agents'))
+            agents_dir = os.path.join(os.path.dirname(WORKSPACE_DIR), 'agents')
+            self.log_message("[Sessions] agents_dir exists=%s", os.path.exists(agents_dir))
+            all_sessions = []
+            now_ms = int(time.time() * 1000)
+            cutoff_ms = now_ms - (24 * 60 * 60 * 1000)  # 24小时前
+            
+            # 遍历所有 agent 目录
+            if os.path.exists(agents_dir):
+                for agent_id in os.listdir(agents_dir):
+                    sessions_file = os.path.join(agents_dir, agent_id, 'sessions', 'sessions.json')
+                    if os.path.exists(sessions_file):
+                        try:
+                            with open(sessions_file, 'r', encoding='utf-8') as f:
+                                sessions_data = json.load(f)
+                            
+                            for session_key, session_info in sessions_data.items():
+                                updated_at = session_info.get('updatedAt', 0)
+                                
+                                # 只保留24小时内的会话
+                                if updated_at >= cutoff_ms:
+                                    # 提取会话标题和消息预览
+                                    session_title = ''
+                                    last_message = ''
+                                    
+                                    # 1. 优先使用 label 字段（如"Cron: pr-review-auto"、"爸爸"、"妈妈"）
+                                    label = session_info.get('label', '')
+                                    if label:
+                                        session_title = label
+                                    else:
+                                        # 2. 从 origin 提取标题（用户标签/渠道）
+                                        origin = session_info.get('origin', {})
+                                        if origin:
+                                            origin_label = origin.get('label', '')
+                                            if origin_label:
+                                                session_title = origin_label
+                                            else:
+                                                # 使用 from 字段
+                                                from_field = origin.get('from', '')
+                                                if from_field and ':' in from_field:
+                                                    session_title = from_field.split(':')[-1][:20]
+                                    
+                                    # 判断 kind（在生成标题之前）
+                                    if ':cron:' in session_key:
+                                        kind = 'cron'
+                                    elif ':feishu:' in session_key:
+                                        kind = 'feishu'
+                                    elif ':openai:' in session_key:
+                                        kind = 'openai'
+                                    elif ':xiao' in session_key and 'voice' in session_key:
+                                        kind = 'voice'
+                                    elif session_key == 'agent:main:main':
+                                        kind = 'main'
+                                    else:
+                                        kind = 'other'
+                                    
+                                    # 3. 如果还是没有标题，根据 kind 生成
+                                    if not session_title:
+                                        if session_key == 'agent:main:main':
+                                            session_title = '🏠 主会话'
+                                        elif ':xiao' in session_key and 'voice' in session_key:
+                                            session_title = '🎤 语音助手'
+                                        elif kind == 'cron':
+                                            session_title = '⏰ 定时任务'
+                                        elif kind == 'feishu':
+                                            session_title = '📱 飞书消息'
+                                        elif kind == 'openai':
+                                            session_title = '🤖 OpenAI'
+                                        else:
+                                            # 从 sessionKey 提取有意义的名称
+                                            if 'voice' in session_key.lower():
+                                                session_title = '🎤 语音会话'
+                                            else:
+                                                session_title = '💬 会话'
+                                    
+                                    # 2. 从 sessionFile 读取最新消息
+                                    session_file = session_info.get('sessionFile', '')
+                                    if session_file and os.path.exists(session_file):
+                                        try:
+                                            with open(session_file, 'r', encoding='utf-8') as f:
+                                                lines = f.readlines()
+                                                if lines:
+                                                    last_line = json.loads(lines[-1].strip())
+                                                    if isinstance(last_line, dict):
+                                                        content = last_line.get('content', '') or last_line.get('text', '')
+                                                        if isinstance(content, str) and content:
+                                                            last_message = content[:50]
+                                                        elif isinstance(content, list):
+                                                            for c in content:
+                                                                if isinstance(c, dict) and c.get('type') == 'text':
+                                                                    last_message = c.get('text', '')[:50]
+                                                                    break
+                                        except Exception as e:
+                                            self.log_message("读取 session 文件失败 %s: %s", session_file, str(e))
+                                    
+                                    # 如果没有消息，显示默认文本
+                                    if not last_message:
+                                        last_message = '(无消息)' 
+                                    
+                                    all_sessions.append({
+                                        'sessionKey': session_key,
+                                        'updatedAt': updated_at,
+                                        'model': session_info.get('model', ''),
+                                        'kind': kind,
+                                        'lastMessage': last_message,
+                                        'sessionTitle': session_title,
+                                        'isMain': session_key == 'agent:main:main',
+                                        'agentId': agent_id
+                                    })
+                        except Exception as e:
+                            self.log_message("读取 sessions 文件失败 %s: %s", sessions_file, str(e))
+            
+            # 按更新时间排序（最新的在前）
+            all_sessions.sort(key=lambda x: x.get('updatedAt', 0), reverse=True)
+            
+            self._send_json_response(200, {
+                'success': True,
+                'sessions': all_sessions
+            })
+            
+        except Exception as e:
+            self.log_message("Sessions 列表错误: %s", str(e))
+            self._send_json_response(500, {'error': str(e), 'message': '获取会话列表失败'})
     
     def _send_gateway_command(self, gateway_token, command):
         """发送命令到 Gateway"""

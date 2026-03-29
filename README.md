@@ -252,27 +252,41 @@ python3 setup.py
 
 ### 配置文件说明
 
-| 文件 | 说明 | 位置 |
-|------|------|------|
-| `config.js` | 前端配置 | 项目目录上级 |
-| `server_config.py` | 后端配置 | 项目目录上级 |
-| `openclaw-web.service` | Systemd 服务 | ~/.config/systemd/user/ |
+| 文件 | 说明 | 位置 | 说明 |
+|------|------|------|------|
+| `config.js` | 前端配置（Gateway Token、WebSocket 地址等） | `~/.openclaw/workspace/config.js` | 用户配置文件 |
+| `server_config.py` | 后端配置（端口、监听地址等） | `~/.openclaw/workspace/server_config.py` | 用户配置文件 |
+| `config.example.js` | 前端配置模板 | 工程目录 | 参考模板 |
+| `server_config.example.py` | 后端配置模板 | 工程目录 | 参考模板 |
+
+> **📝 配置与代码分离的设计**：
+> - 配置文件放在 `~/.openclaw/workspace/` 目录下
+> - 工程代码在 `openclaw-mobile-release/` 目录
+> - 这样更新工程代码时不会覆盖用户配置
 
 ### 常见问题
 
+**Q: 配置文件在哪里？**
+> A: 配置文件统一在 `~/.openclaw/workspace/` 目录下：
+> - `config.js` - 前端配置
+> - `server_config.py` - 后端配置
+>
+> 工程目录 (`openclaw-mobile-release/`) 只包含代码，配置文件独立管理。
+
 **Q: 配置会备份吗？**
 > A: 是的！运行 setup.py 会自动备份现有配置文件到：
-> - 备份位置：`项目目录/../config-backup/`（即 workspace/config-backup/）
+> - 备份位置：`~/.openclaw/workspace/config-backup/`
 > - 文件：`config.js.日期时间`、`server_config.py.日期时间`、`openclaw.json.日期时间`
 
-**Q: 配置后需要重启 Gateway 吗？**
-> A: 是的，配置工具会提示你运行：
-> ```bash
-> systemctl --user restart openclaw-gateway
-> ```
-
 **Q: 想修改配置怎么办？**
-> A: 重新运行 `python3 setup.py` 即可重新配置
+> A: 直接编辑配置文件：
+> ```bash
+> vim ~/.openclaw/workspace/config.js      # 前端配置
+> vim ~/.openclaw/workspace/server_config.py  # 后端配置
+> 
+> # 修改后重启服务
+> systemctl --user restart openclaw-mobile
+> ```
 
 **Q: BIND_HOST 绑定 Tailscale IP 有什么好处？**
 > A: 更安全！只有 Tailscale 网络内的设备才能访问服务
@@ -281,27 +295,27 @@ python3 setup.py
 
 ### 方式二：手动配置
 
-#### 1. 配置项目
+#### 1. 复制配置模板
 
 ```bash
-# 克隆项目
-git clone https://github.com/yujuntea/openclaw-mobile.git
-cd openclaw-mobile
+# 复制前端配置模板
+cp openclaw-mobile-release/config.example.js ~/.openclaw/workspace/config.js
 
-# 创建前端配置文件
-cp config.example.js ../config.js
-
-# 创建后端配置文件
-cp server_config.example.py ../server_config.py
-
-# 编辑前端配置
-vim ../config.js
-
-# 编辑后端配置
-vim ../server_config.py
+# 复制后端配置模板
+cp openclaw-mobile-release/server_config.example.py ~/.openclaw/workspace/server_config.py
 ```
 
-#### 2. 前端配置 (config.js)
+#### 2. 编辑配置
+
+```bash
+# 编辑前端配置（Gateway Token、WebSocket 地址等）
+vim ~/.openclaw/workspace/config.js
+
+# 编辑后端配置（端口、监听地址等）
+vim ~/.openclaw/workspace/server_config.py
+```
+
+#### 3. 前端配置 (config.js)
 
 ```javascript
 const OPENCLAW_CONFIG = {
@@ -386,12 +400,8 @@ python3 server.py
 #### 前台启动（调试用）
 
 ```bash
-# 创建符号链接（推荐）
-ln -sf $(pwd)/server.py ../server.py
-ln -sf $(pwd)/mobile.html ../mobile.html
-
-# 前台启动
-cd ..
+# 直接运行（配置文件在 workspace 目录）
+cd ~/.openclaw/workspace/openclaw-mobile-release
 python3 server.py
 ```
 
@@ -400,34 +410,30 @@ python3 server.py
 **方式 1：nohup**
 
 ```bash
-cd /path/to/workspace
-nohup python3 server.py > server.log 2>&1 &
+cd ~/.openclaw/workspace/openclaw-mobile-release
+nohup python3 server.py > ~/.openclaw/workspace/server.log 2>&1 &
 
 # 查看日志
-tail -f server.log
+tail -f ~/.openclaw/workspace/server.log
 
 # 停止服务
-pkill -f "python3 server.py"
+pkill -f "openclaw-mobile-release/server.py"
 ```
 
 **方式 2：Systemd 服务（推荐）**
 
-**步骤 1：创建服务文件**
-
 ```bash
-# 创建目录
-mkdir -p ~/.config/systemd/user
-
 # 创建服务文件
-cat > ~/.config/systemd/user/openclaw-web.service << 'EOF'
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/openclaw-mobile.service << 'EOF'
 [Unit]
-Description=OpenClaw Web Server (Dashboard + Mobile + Media)
+Description=OpenClaw Mobile Web Server
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/path/to/workspace
-ExecStart=/usr/bin/python3 /path/to/workspace/server.py
+WorkingDirectory=/root/.openclaw/workspace/openclaw-mobile-release
+ExecStart=/usr/bin/python3 /root/.openclaw/workspace/openclaw-mobile-release/server.py
 Restart=on-failure
 RestartSec=5
 
@@ -435,32 +441,22 @@ RestartSec=5
 WantedBy=default.target
 EOF
 
-# 注意：修改 WorkingDirectory 和 ExecStart 为你的实际路径
-```
-
-**步骤 2：启动服务**
-
-```bash
-# 重载配置
+# 启用并启动服务
 systemctl --user daemon-reload
-
-# 启动服务
-systemctl --user start openclaw-web
-
-# 开机自启
-systemctl --user enable openclaw-web
+systemctl --user enable openclaw-mobile
+systemctl --user start openclaw-mobile
 ```
 
-**步骤 3：管理服务**
+**Systemd 服务管理命令**：
 
-```bash
-# 查看状态
-systemctl --user status openclaw-web
-
-# 查看日志
-journalctl --user -u openclaw-web -f
-
-# 停止服务
+| 命令 | 说明 |
+|------|------|
+| `systemctl --user start openclaw-mobile` | 启动服务 |
+| `systemctl --user stop openclaw-mobile` | 停止服务 |
+| `systemctl --user restart openclaw-mobile` | 重启服务 |
+| `systemctl --user status openclaw-mobile` | 查看状态 |
+| `journalctl --user -u openclaw-mobile -f` | 查看实时日志 |
+| `journalctl --user -u openclaw-mobile -n 50` | 查看最近 50 条日志 |
 systemctl --user stop openclaw-web
 
 # 重启服务
@@ -482,13 +478,13 @@ systemctl --user restart openclaw-web
 
 | 文件 | 用途 | 位置 |
 |------|------|------|
-| `config.js` | 前端配置 | 项目目录上级 |
-| `server_config.py` | 后端配置 | 项目目录上级 |
-| `config.example.js` | 前端配置模板 | 项目目录 |
-| `server_config.example.py` | 后端配置模板 | 项目目录 |
-| `i18n.js` | 国际化配置 | 项目目录 |
+| `config.js` | 前端配置（Gateway Token 等） | `~/.openclaw/workspace/` |
+| `server_config.py` | 后端配置（端口、地址等） | `~/.openclaw/workspace/` |
+| `config.example.js` | 前端配置模板 | 工程目录 |
+| `server_config.example.py` | 后端配置模板 | 工程目录 |
+| `i18n.js` | 国际化配置 | 工程目录 |
 
-**注意**：`config.js` 和 `server_config.py` 包含敏感信息，不会进入 Git。
+> **注意**：配置文件（`config.js` 和 `server_config.py`）位于 `~/.openclaw/workspace/` 目录下，不会随工程代码更新而丢失。
 
 ## 🌐 多语言支持
 
