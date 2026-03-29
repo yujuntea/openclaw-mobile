@@ -58,9 +58,9 @@
     }
     .lang-btn:active { transform: scale(0.9); background: var(--bg4); }
     
-    .chat { position: absolute; top: var(--safe-top); bottom: var(--input-height); left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 16px; -webkit-overflow-scrolling: touch; }
+    .chat { position: absolute; top: var(--safe-top); bottom: 0; left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 12px; padding-bottom: calc(var(--input-height) + 30px); -webkit-overflow-scrolling: touch; } 
     
-    .msg { display: flex; gap: 8px; margin-bottom: 16px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
+    .msg { display: flex; gap: 8px; margin-bottom: 12px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
     @keyframes in { from { opacity: 0; transform: translateY(8px); } }
     .msg.user { margin-left: auto; flex-direction: row-reverse; }
     .msg.ai { flex-direction: row; }
@@ -69,9 +69,12 @@
     .msg.user .av { background: var(--accent); }
     
     .msg-content { flex: 1; min-width: 0; }
-    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
+    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; position: relative; }
     .msg.ai .bubble { background: var(--bg3); border-top-left-radius: 6px; }
     .msg.user .bubble { background: var(--accent); border-top-right-radius: 6px; }
+    .tts-btn { background: var(--bg4); border: none; border-radius: 12px; padding: 6px 12px; color: var(--accent); cursor: pointer; font-size: 13px; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
+    .tts-btn:active { transform: scale(0.95); background: var(--bg3); }
+    .tts-btn.speaking { background: var(--red); color: #fff; }
     
     .time { font-size: 10px; color: var(--text2); margin-top: 4px; opacity: .7; }
     .msg.user .time { text-align: right; }
@@ -110,30 +113,117 @@
     @keyframes workIndicator { 0%,100%{transform: scale(1)} 50%{transform: scale(1.05)} }
     .work-indicator::before { content: '⚡'; }
     
+    /* TTS 播放指示器 */
+    .tts-indicator { position: fixed; top: calc(var(--safe-top) + 8px); left: 12px; background: var(--green); color: #fff; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; display: none; align-items: center; gap: 6px; z-index: 1000; box-shadow: 0 2px 10px rgba(48,209,88,0.4); animation: ttsPulse 1.5s infinite; }
+    .tts-indicator.active { display: flex; }
+    @keyframes ttsPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+    .tts-indicator::before { content: '🔊'; }
+    
+    /* TTS 按钮激活状态 */
+    .header-btn.active { background: var(--green); color: #fff; }
+    
     /* 流式输出 */
     .streaming { border-left-color: var(--accent); }
     .streaming .thinking-icon { animation: pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
     
-    .input-wrap { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.95); padding: 8px 12px; padding-bottom: calc(8px + env(safe-area-inset-bottom,0)); border-top: .5px solid rgba(255,255,255,.1); display: flex; gap: 8px; align-items: center; z-index: 100; flex-wrap: wrap; }
-    .input { flex: 1; background: var(--bg3); border-radius: 20px; padding: 10px 16px; font-size: 16px; color: var(--text); border: none; outline: none; -webkit-appearance: none; min-width: 60%; }
-    .send { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .send:active { transform: scale(.92); }
-    .send:disabled { background: var(--bg3); }
+    .input-wrap { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 10px 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom,0px)); border-top: .5px solid rgba(255,255,255,.08); z-index: 100; }
+    .input-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+    .input-row:last-child { margin-bottom: 0; }
+    /* 第一行按钮布局：快捷按钮固定宽度，模型选择器占满剩余空间，图片/文件按钮固定宽度 */
+    .input-row:first-child .qa-btn { flex-shrink: 0; }
+    .input-row:first-child .model-selector { flex: 1; min-width: 0; }
+    .input-row:first-child .img-btn { flex-shrink: 0; }
+  
+  /* 快捷工具面板（可展开/收起） */
+  .quick-panel {
+    position: absolute;
+    bottom: 60px;
+    left: 12px;
+    right: 12px;
+    background: rgba(44,44,46,0.98);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px;
+    z-index: 150;
+    animation: slideUp 0.2s ease;
+  }
+  
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .quick-panel-content {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  
+  .quick-panel-content a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 8px 6px;
+    background: rgba(58,58,60,0.6);
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 11px;
+    transition: all 0.15s ease;
+  }
+  
+  .quick-panel-content a:hover {
+    background: rgba(58,58,60,0.9);
+  }
+  
+  .quick-panel-content a:active {
+    background: var(--accent);
+    transform: scale(0.95);
+  }
+  
+  .quick-panel-content a .icon {
+    font-size: 18px;
+  }
+  
+  .quick-panel-content a .label {
+    font-size: 10px;
+    color: var(--text2);
+  }
+    .input { flex: 1; background: var(--bg2); border-radius: 22px; padding: 10px 16px; font-size: 16px; color: var(--text); border: 1px solid rgba(255,255,255,0.08); outline: none; -webkit-appearance: none; resize: none; max-height: 120px; line-height: 1.5; transition: border-color 0.2s, box-shadow 0.2s; min-height: 44px; }
+    .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,132,255,0.15); }
+    .send { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+    .send:active { transform: scale(.9); background: #0070e0; }
+    .send:disabled { background: var(--bg4); }
     
     /* 图片按钮 */
-    .img-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); border: none; color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .img-btn:active { transform: scale(.92); }
+    .img-btn { width: 40px; height: 40px; border-radius: 50%; background: rgba(58,58,60,0.7); border: 1px solid rgba(255,255,255,0.08); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+    .img-btn:active { transform: scale(.92); background: var(--bg4); }
     #imgInput { display: none; }
     
-    /* 图片预览 - 支持多图 */
-    .img-preview { display: none; width: 100%; padding: 8px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    /* 图片预览 - 支持多图（单独一行，固定在输入区域上方） */
+    .img-preview { display: none; position: fixed; bottom: 100px; left: 0; right: 0; width: 100%; padding: 8px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; background: rgba(28,28,30,.98); backdrop-filter: blur(20px); border-top: .5px solid rgba(255,255,255,.08); z-index: 99; }
     .img-preview.has-img { display: flex; align-items: center; gap: 8px; }
     .img-preview .img-list { display: flex; gap: 8px; flex-shrink: 0; }
     .img-preview .img-item { position: relative; flex-shrink: 0; }
     .img-preview img { max-width: 80px; max-height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid var(--bg4); }
     .img-preview .img-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); border: none; color: #fff; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
     .img-preview .img-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
+    
+    /* 文件预览（单独一行，固定在输入区域上方） */
+    .file-preview { display: none; position: fixed; bottom: 100px; left: 0; right: 0; width: 100%; padding: 8px 12px; background: rgba(28,28,30,.98); backdrop-filter: blur(20px); border-top: .5px solid rgba(255,255,255,.08); z-index: 99; }
+    .file-preview.has-file { display: flex; align-items: center; gap: 8px; }
+    .file-preview .file-list { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .file-preview .file-item { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg3); border-radius: 8px; border: 1px solid var(--bg4); }
+    .file-preview .file-icon { font-size: 20px; }
+    .file-preview .file-info { display: flex; flex-direction: column; }
+    .file-preview .file-name { font-size: 13px; color: var(--text); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-preview .file-size { font-size: 11px; color: var(--text2); }
+    .file-preview .file-remove { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--red); border: none; color: #fff; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+    .file-preview .file-count { font-size: 12px; color: var(--text2); margin-left: 8px; flex-shrink: 0; }
     
     .login { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; z-index: 200; }
     .login-emoji { font-size: 64px; margin-bottom: 16px; }
@@ -146,9 +236,352 @@
     
     /* 回复中的思考/工具 */
     .reply-tools { margin-top: 8px; }
+  /* 登录模态框 */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.show { display: flex !important; }
+  .modal-content {
+    background: var(--bg1);
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%;
+    max-width: 360px;
+  }
+  .login-header { text-align: center; margin-bottom: 24px; }
+  .login-icon { font-size: 48px; display: block; margin-bottom: 12px; }
+  .login-form .input-group { margin-bottom: 16px; }
+  .login-form label { display: block; font-size: 14px; color: var(--text2); margin-bottom: 8px; }
+  .login-form input[type="password"] {
+    width: 100%; padding: 12px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 16px; box-sizing: border-box;
+  }
+  .checkbox-label {
+    display: flex; align-items: center; gap: 8px; font-size: 14px;
+    color: var(--text2); cursor: pointer; margin: 12px 0;
+  }
+  .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; }
+  .login-btn {
+    width: 100%; padding: 14px; background: var(--accent); border: none;
+    border-radius: 8px; color: #fff; font-size: 16px; font-weight: 600;
+    cursor: pointer; margin-top: 16px;
+  }
+  .login-btn:active { opacity: 0.8; }
+  .login-hint { text-align: center; font-size: 12px; color: var(--text3); margin-top: 16px; }
+  
+  /* 快捷操作栏 */
+  /* 快捷操作栏 */
+  .quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(28,28,30,0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+    scrollbar-width: none;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .quick-actions::-webkit-scrollbar { display: none; }
+  
+  .qa-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 10px;
+    background: rgba(58,58,60,0.7);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    min-width: 52px;
+    height: 40px;
+  }
+  
+  .qa-btn:hover {
+    background: rgba(58,58,60,0.9);
+    border-color: rgba(255,255,255,0.2);
+  }
+  
+  .qa-btn:active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    transform: scale(0.95);
+  }
+  
+  .qa-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+  
+  .qa-text {
+    font-size: 9px;
+    color: var(--text2);
+    font-weight: 500;
+  }
+  
+  .qa-btn:active .qa-text {
+    color: #fff;
+  }
+  
+  .qa-divider {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.15);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+  
+  /* 模型选择器 - 自定义下拉菜单 */
+  .model-selector {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .model-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(58,58,60,0.7);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    height: 40px;
+    transition: all 0.15s;
+  }
+  
+  .model-btn:hover {
+    border-color: rgba(255,255,255,0.25);
+    background: rgba(58,58,60,0.85);
+  }
+  
+  .model-btn.active {
+    border-color: var(--accent);
+  }
+  
+  .model-btn.loading {
+    opacity: 0.7;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .model-btn .btn-content {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  .model-btn .model-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .model-btn .arrow {
+    font-size: 9px;
+    opacity: 0.7;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  
+  .model-btn.active .arrow {
+    transform: rotate(180deg);
+  }
+  
+  .model-menu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: rgba(30,30,30,0.98);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 180px;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    z-index: 1001;
+    display: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .model-menu.show {
+    display: block;
+  }
+  
+  .model-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  
+  .model-menu-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  
+  .model-menu-item:active {
+    background: var(--accent);
+  }
+  
+  .model-menu-item.selected {
+    color: var(--accent);
+    background: rgba(10, 132, 255, 0.15);
+  }
+  
+  .model-menu-item.selected:hover {
+    background: rgba(10, 132, 255, 0.25);
+  }
+  
+  .model-menu-item .check {
+    opacity: 0;
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+  }
+  
+  .model-menu-item.selected .check {
+    opacity: 1;
+  }
+  
+  .model-menu-item .model-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
+  
+  .model-menu-item .model-provider {
+    font-size: 10px;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  
+  /* 下拉菜单 */
+  .qa-dropdown {
+    position: relative;
+    flex-shrink: 0;
+  }
+  
+  .qa-dropdown-btn {
+    min-width: 60px;
+  }
+  
+  .qa-menu {
+    position: absolute;
+    bottom: 120%;
+    left: 0;
+    background: rgba(44,44,46,0.98);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px 0;
+    min-width: 140px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    z-index: 1000;
+  }
+  
+  .qa-menu a {
+    display: block;
+    padding: 10px 16px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.15s ease;
+  }
+  
+  .qa-menu a:hover {
+    background: rgba(255,255,255,0.1);
+  }
+  
+  .qa-menu a:active {
+    background: var(--accent);
+  }
   </style>
 </head>
 <body>
+  <!-- Session 登录模态框 -->
+  <div id="sessionLoginModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="login-header">
+        <span class="login-icon">🔐</span>
+        <h2>安全登录</h2>
+      </div>
+      
+      <div class="login-form">
+        <div class="input-group">
+          <label>Gateway Token</label>
+          <input type="password" id="sessionLoginToken" 
+                 placeholder="请输入访问令牌"
+                 autocomplete="off">
+        </div>
+        
+        <label class="checkbox-label">
+          <input type="checkbox" id="rememberToken">
+          <span>记住 Token（本地保存）</span>
+        </label>
+        
+        <button class="login-btn" onclick="doSessionLogin()">
+          登 录
+        </button>
+        
+        <p class="login-hint">
+          Token 从 Gateway 配置中获取
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 会话列表模态框 -->
+  <div id="sessionListModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 400px;">
+      <div class="login-header">
+        <span class="login-icon">📋</span>
+        <h2>会话列表</h2>
+        <button onclick="hideSessionList()" style="position: absolute; right: 16px; top: 16px; background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+      
+      <div id="sessionListContent" style="max-height: 60vh; overflow-y: auto; padding: 8px;">
+        <div style="text-align: center; color: var(--text2); padding: 20px;">
+          加载中...
+        </div>
+      </div>
+    </div>
+  </div>
+  
   <div class="login" id="login">
     <div class="login-emoji">🤖</div>
     <div class="login-title" data-i18n="appName">小强 AI</div>
@@ -157,6 +590,13 @@
     <input type="text" class="login-input" id="urlInput" data-i18n-placeholder="proxyUrlPlaceholder" placeholder="代理地址">
     <input type="password" class="login-input" id="tokenInput" data-i18n-placeholder="tokenPlaceholder" placeholder="访问令牌">
     <input type="text" class="login-input" id="sessionKey" data-i18n-placeholder="sessionPlaceholder" placeholder="会话ID">
+    
+    <!-- 记住 Token 复选框 -->
+    <label class="checkbox-label" style="margin: 8px 0;">
+      <input type="checkbox" id="rememberGatewayToken">
+      <span>记住 Token（本地保存）</span>
+    </label>
+    
     <button class="login-btn" onclick="doLogin()" data-i18n="connectBtn">连接</button>
     <div class="login-err" id="loginErr"></div>
   </div>
@@ -167,21 +607,69 @@
       <div class="header-center" id="headerTitle">🤖 <span data-i18n="appName">小强 AI</span></div>
       <div class="header-right">
         <button class="header-btn" id="refreshBtn" onclick="refreshHistory()" data-i18n-title="refreshBtn" title="刷新消息">🔄</button>
+        <button class="header-btn" id="ttsToggle" onclick="toggleAutoPlay()" title="自动朗读">🔊</button>
         <button class="lang-btn" id="langBtn" onclick="toggleLang()" title="切换语言">EN</button>
         <button class="header-btn" id="menuBtn" onclick="toggleNav()" data-i18n-title="menuBtn" title="菜单">☰</button>
       </div>
     </div>
     <!-- 工作状态指示器 -->
     <div class="work-indicator" id="workIndicator" data-i18n="working">工作中...</div>
+    <!-- TTS 播放指示器 -->
+    <div class="tts-indicator" id="ttsIndicator">朗读中...</div>
     <div class="chat" id="chatArea"></div>
+    
+    <!-- 快捷工具栏（独立区域，可展开/收起） -->
+    <div class="quick-panel" id="quickPanel" style="display: none;">
+      <div class="quick-panel-content">
+        <a href="javascript:void(0)" onclick="sendCommand('/status'); toggleQuickPanel();">📊 状态</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/compact'); toggleQuickPanel();">🧹 压缩</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/context detail'); toggleQuickPanel();">📋 上下文</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/stop'); toggleQuickPanel();">⏹️ 停止</a>
+        <a href="javascript:void(0)" onclick="sendCommand('/new'); toggleQuickPanel();">🆕 新会话</a>
+      </div>
+    </div>
+    
+    <!-- 图片预览（单独一行） -->
+    <div class="img-preview" id="imgPreview">
+      <div class="img-list" id="imgList"></div>
+      <div class="img-count" id="imgCount"></div>
+    </div>
+    
+    <!-- 文件预览（单独一行） -->
+    <div class="file-preview" id="filePreview" style="display:none">
+      <div class="file-list" id="fileList"></div>
+      <div class="file-count" id="fileCount"></div>
+    </div>
+    
+    <!-- 输入区域 -->
     <div class="input-wrap">
-      <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
-      <button class="img-btn" onclick="document.getElementById('imgInput').click()" data-i18n-title="sendImageBtn" title="发送图片">📷</button>
-      <input type="text" class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息..." enterkeyhint="send">
-      <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
-      <div class="img-preview" id="imgPreview">
-        <div class="img-list" id="imgList"></div>
-        <div class="img-count" id="imgCount"></div>
+      <!-- 第一行：工具按钮 -->
+      <div class="input-row">
+        <button class="qa-btn" onclick="toggleQuickPanel()" title="快捷操作">
+          <span class="qa-icon">⚡</span>
+          <span class="qa-text">快捷</span>
+        </button>
+        
+        <div class="model-selector">
+          <button class="model-btn" id="modelBtn" onclick="toggleModelMenu()">
+            <div class="btn-content">
+              <span id="modelBtnText" class="model-text">🔄 模型</span>
+            </div>
+            <span class="arrow">▼</span>
+          </button>
+          <div class="model-menu" id="modelMenu"></div>
+        </div>
+        
+        <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImgSelect()">
+        <input type="file" id="fileInput" accept="*" onchange="handleFileSelect()" style="display:none">
+        <button class="img-btn" onclick="document.getElementById('imgInput').click()" data-i18n-title="sendImageBtn" title="发送图片">📷</button>
+        <button class="img-btn" onclick="document.getElementById('fileInput').click()" data-i18n-title="sendFileBtn" title="发送文件">📎</button>
+      </div>
+      
+      <!-- 第二行：输入框 -->
+      <div class="input-row">
+        <textarea class="input" id="msgInput" data-i18n-placeholder="msgPlaceholder" placeholder="发送消息... (Shift+Enter 换行)" rows="1" enterkeyhint="send"></textarea>
+        <button class="send" id="sendBtn" onclick="sendMsg()">➤</button>
       </div>
     </div>
   </div>
@@ -193,6 +681,13 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="chatSection">聊天</div>
+        <a href="javascript:void(0)" class="nav-link" onclick="showSessionList(); closeNav();">
+          <span class="icon">📋</span>
+          <div>
+            <div class="text" data-i18n="sessionList">会话列表</div>
+            <div class="desc" data-i18n="sessionListDesc">最近24小时的会话</div>
+          </div>
+        </a>
         <a href="javascript:void(0)" class="nav-link" onclick="closeNav();">
           <span class="icon">💬</span>
           <div>
@@ -204,21 +699,21 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="fileSection">文件浏览</div>
-        <a href="/browse/" class="nav-link">
+        <a href="/browse/" class="nav-link" onclick="handleBrowseClick(event, '/browse/')">
           <span class="icon">📁</span>
           <div>
             <div class="text" data-i18n="rootDir">根目录</div>
             <div class="desc" data-i18n="rootDirDesc">浏览所有文件</div>
           </div>
         </a>
-        <a href="/browse/media" class="nav-link">
+        <a href="/browse/media" class="nav-link" onclick="handleBrowseClick(event, '/browse/media')">
           <span class="icon">🖼️</span>
           <div>
             <div class="text" data-i18n="mediaDir">Media 文件</div>
             <div class="desc" data-i18n="mediaDirDesc">截图、图片、视频</div>
           </div>
         </a>
-        <a href="/browse/workspace" class="nav-link">
+        <a href="/browse/workspace" class="nav-link" onclick="handleBrowseClick(event, '/browse/workspace')">
           <span class="icon">📂</span>
           <div>
             <div class="text" data-i18n="workspaceDir">Workspace</div>
@@ -229,6 +724,27 @@
       
       <div class="nav-section">
         <div class="nav-section-title" data-i18n="otherSection">其他</div>
+        <a href="javascript:void(0)" class="nav-link" onclick="speakLastAIMessage(); closeNav();">
+          <span class="icon">🔊</span>
+          <div>
+            <div class="text">朗读最后回复</div>
+            <div class="desc">播放 AI 最后的回复</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="toggleAutoPlay();">
+          <span class="icon" id="ttsMenuIcon">🔇</span>
+          <div>
+            <div class="text" id="ttsMenuText">自动朗读：关闭</div>
+            <div class="desc">AI 回复后自动朗读</div>
+          </div>
+        </a>
+        <a href="javascript:void(0)" class="nav-link" onclick="stopSpeak(); closeNav();">
+          <span class="icon">⏹️</span>
+          <div>
+            <div class="text">停止朗读</div>
+            <div class="desc">停止当前朗读</div>
+          </div>
+        </a>
         <a href="javascript:void(0)" class="nav-link" onclick="clearHistory(); closeNav();">
           <span class="icon">🗑️</span>
           <div>
@@ -248,9 +764,415 @@
   </div>
 
   <script>
+    // ========== 全局变量 ==========
+    // 强制使用 /api 代理和正确的session key（与Dashboard共享）
+    let gateway = '/api';
+    let authToken = ''; // 将在页面加载时从 config.js 初始化
+    function getSessionKeyFromURL() { const url = new URL(window.location.href); return url.searchParams.get('session') || 'agent:main:main'; }
+    let sessionKey = getSessionKeyFromURL();
+    let selectedImages = []; // 存储选中的图片 [{file, base64, id}]
+    let selectedFiles = []; // 存储选中的文件 [{file, serverPath, id, name, size, type}]
+    let gwClient = null; // WebSocket 客户端
+    
+    // TTS 相关变量
+    let ttsEnabled = false;  // 是否启用自动朗读
+    let autoPlayEnabled = false;  // 是否启用自动播放
+    let currentUtterance = null;  // 当前正在播放的语音
+    let lastAIMessage = '';  // 最后一条 AI 消息
+    
+    // ========== Session 认证管理 ==========
+    
+    // 检查 Session 是否有效
+    async function checkSessionAuth() {
+      const sessionToken = localStorage.getItem('oc_session_token');
+      if (!sessionToken) {
+        return false;
+      }
+      
+      try {
+        // 使用 /api/sessions 接口验证 session（需要认证）
+        const resp = await fetch('/api/sessions', {
+          headers: {'Authorization': 'Bearer ' + sessionToken}
+        });
+        return resp.status !== 401;
+      } catch (e) {
+        console.error('Session 验证失败:', e);
+        return false;
+      }
+    }
+    
+    // 验证 session 并尝试自动登录
+    async function ensureSessionAuth() {
+      const isValid = await checkSessionAuth();
+      if (isValid) {
+        return true;
+      }
+      
+      // Session 无效，尝试用保存的 gateway token 重新登录
+      const savedToken = localStorage.getItem('oc_gateway_token');
+      if (savedToken) {
+        console.log('Session 失效，尝试自动重新登录...');
+        try {
+          const resp = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({token: savedToken})
+          });
+          
+          const data = await resp.json();
+          
+          if (data.success) {
+            localStorage.setItem('oc_session_token', data.token);
+            document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
+            console.log('✅ 自动重新登录成功');
+            return true;
+          }
+        } catch (e) {
+          console.error('自动重新登录失败:', e);
+        }
+      }
+      
+      // 无法自动登录，需要用户手动登录
+      return false;
+    }
+    
+    // 文件浏览链接点击处理
+    async function handleBrowseClick(event, path) {
+      event.preventDefault();
+      
+      // 检查 session 是否有效
+      const canProceed = await ensureSessionAuth();
+      
+      if (canProceed) {
+        // Session 有效，跳转到目标页面
+        window.location.href = path;
+      } else {
+        // 保存待跳转的路径
+        pendingBrowsePath = path;
+        // 需要登录，显示登录框
+        showSessionLoginModal();
+      }
+    }
+    
+    // 显示 Session 登录模态框
+    function showSessionLoginModal() {
+      document.getElementById('sessionLoginModal').classList.add('show');
+      // 自动填充保存的 token
+      const savedToken = localStorage.getItem('oc_gateway_token');
+      if (savedToken) {
+        document.getElementById('sessionLoginToken').value = savedToken;
+        document.getElementById('rememberToken').checked = true;
+      }
+    }
+    
+    // 隐藏 Session 登录模态框
+    function hideSessionLoginModal() {
+      document.getElementById('sessionLoginModal').classList.remove('show');
+    }
+    
+    // ========== 会话列表功能 ==========
+    
+    // 显示会话列表
+    async function showSessionList() {
+      console.log('[Sessions] showSessionList called');
+      const modal = document.getElementById('sessionListModal');
+      const content = document.getElementById('sessionListContent');
+      
+      modal.classList.add('show');
+      content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">加载中...</div>';
+      
+      try {
+        // 获取 session token
+        let sessionToken = localStorage.getItem('oc_session_token');
+        console.log('[Sessions] sessionToken from localStorage:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'null');
+        if (!sessionToken) {
+          sessionToken = getCookie('oc_session_token');
+          console.log('[Sessions] sessionToken from cookie:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'null');
+        }
+        
+        if (!sessionToken) {
+          content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">请先登录</div>';
+          return;
+        }
+        
+        console.log('[Sessions] Fetching sessions with token:', sessionToken.substring(0, 20) + '...');
+        const resp = await fetch('/api/sessions', {
+          headers: {'Authorization': 'Bearer ' + sessionToken}
+        });
+        
+        console.log('[Sessions] Response status:', resp.status);
+        
+        if (resp.status === 401) {
+          content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">登录已过期，请重新登录</div>';
+          return;
+        }
+        
+        const data = await resp.json();
+        console.log('[Sessions] Response data:', JSON.stringify(data).substring(0, 200));
+        
+        if (data.sessions && data.sessions.length > 0) {
+          let html = '';
+          for (const session of data.sessions) {
+            const time = formatSessionTime(session.updatedAt);
+            const isMain = session.isMain ? '<span style="color: var(--accent);">⭐</span>' : '';
+            const kind = session.kind || 'other';
+            const kindIcon = kind === 'main' ? '🏠' : kind === 'isolated' ? '🔒' : '📝';
+            
+            html += `
+              <div class="session-item" onclick="switchSession('${session.sessionKey}')" 
+                   style="padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; 
+                          background: var(--bg2); transition: background 0.2s;"
+                   onmouseover="this.style.background='var(--bg3)'"
+                   onmouseout="this.style.background='var(--bg2)'">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span>${kindIcon}</span>
+                  <span style="font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${isMain} ${session.sessionTitle || session.model || 'unknown'}
+                  </span>
+                  <span style="font-size: 12px; color: var(--text2);">${time}</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${session.lastMessage || ''}
+                </div>
+              </div>
+            `;
+          }
+          content.innerHTML = html;
+        } else {
+          content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">最近24小时没有活跃会话</div>';
+        }
+      } catch (e) {
+        console.error('加载会话列表失败:', e);
+        content.innerHTML = '<div style="text-align: center; color: var(--text2); padding: 20px;">加载失败: ' + e.message + '</div>';
+      }
+    }
+    
+    // 隐藏会话列表
+    function hideSessionList() {
+      document.getElementById('sessionListModal').classList.remove('show');
+    }
+    
+    // 切换会话
+    function switchSession(sessionKey) {
+      console.log('[switchSession] Clicked sessionKey:', sessionKey);
+      
+      // 更新 URL 参数
+      const url = new URL(window.location);
+      url.searchParams.set('session', sessionKey);
+      console.log('[switchSession] New URL:', url.toString());
+      
+      window.location.href = url.toString();
+    }
+    
+    // 格式化会话时间
+    function formatSessionTime(timestamp) {
+      const now = Date.now();
+      const diff = now - timestamp;
+      
+      if (diff < 60000) return '刚刚';
+      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+      return new Date(timestamp).toLocaleDateString();
+    }
+    
+    // 获取 Cookie
+    function getCookie(name) {
+      const value = '; ' + document.cookie;
+      const parts = value.split('; ' + name + '=');
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+    
+    // ========== 会话列表功能结束 ==========
+    
+    // 待跳转的路径（登录成功后自动跳转）
+    let pendingBrowsePath = null;
+    
+    // Session 登录
+    async function doSessionLogin() {
+      const token = document.getElementById('sessionLoginToken').value.trim();
+      const remember = document.getElementById('rememberToken').checked;
+      
+      if (!token) {
+        alert('请输入 Token');
+        return;
+      }
+      
+      try {
+        const resp = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token})
+        });
+        
+        const data = await resp.json();
+        
+        if (data.success) {
+          // 保存 session token
+          localStorage.setItem('oc_session_token', data.token);
+          // 同时设置 cookie，供页面跳转使用（如 /browse/）
+          document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
+          
+          // 保存 gateway token（如果勾选记住）
+          if (remember) {
+            localStorage.setItem('oc_gateway_token', token);
+          } else {
+            localStorage.removeItem('oc_gateway_token');
+          }
+          
+          // 隐藏登录框
+          hideSessionLoginModal();
+          
+          // 如果有待跳转的路径，跳转过去
+          if (pendingBrowsePath) {
+            const path = pendingBrowsePath;
+            pendingBrowsePath = null;
+            window.location.href = path;
+          }
+          
+          return true;
+        } else {
+          alert('登录失败: ' + (data.message || data.error || '未知错误'));
+          return false;
+        }
+      } catch (e) {
+        alert('登录失败: ' + e.message);
+        return false;
+      }
+    }
+    
+    // 获取认证头
+    function getAuthHeaders() {
+      const sessionToken = localStorage.getItem('oc_session_token');
+      const headers = {};
+      if (sessionToken) {
+        headers['Authorization'] = 'Bearer ' + sessionToken;
+      }
+      return headers;
+    }
+    
+    // ========== 快捷操作 ==========
+    
+    // 切换快捷面板
+    function toggleQuickPanel() {
+      const panel = document.getElementById('quickPanel');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+    
+    // 点击其他地方关闭面板
+    document.addEventListener('click', function(e) {
+      // 关闭快捷面板
+      const panel = e.target.closest('.quick-panel');
+      const btn = e.target.closest('.qa-btn');
+      if (!panel && !btn) {
+        const quickPanel = document.getElementById('quickPanel');
+        if (quickPanel) quickPanel.style.display = 'none';
+      }
+      
+      // 关闭模型菜单
+      const modelMenu = e.target.closest('.model-menu');
+      const modelBtn = e.target.closest('.model-btn');
+      if (!modelMenu && !modelBtn) {
+        closeModelMenu();
+      }
+    });
+    
+    // 发送命令（直接发送消息）
+    // 发送命令
+    async function sendCommand(command) {
+      // 检查是否已连接
+      if (!gwClient || !gwClient.authenticated) {
+        alert('请等待连接建立...');
+        return;
+      }
+      
+      // 命令名称映射
+      const cmdNames = {
+        '/status': '📊 状态',
+        '/compact': '🧹 压缩',
+        '/context detail': '📋 上下文',
+        '/stop': '⏹️ 停止',
+        '/new': '🆕 新会话'
+      };
+      
+      // 显示用户消息
+      addMsg({content: cmdNames[command] || command, role: 'user'});
+      
+      // 显示"发送中"指示器
+      showWorkIndicator(true, '🤔 处理中...');
+      
+      // 创建 AI 消息容器
+      const aiMsg = createAIMessage();
+      const bubble = aiMsg.querySelector('.bubble');
+      bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待回复...';
+      
+      try {
+        // 发送命令
+        const result = await gwClient.sendMessage(command, []);
+        console.log('命令发送成功:', result);
+      } catch (e) {
+        // 隐藏指示器
+        showWorkIndicator(false);
+        // 显示错误
+        bubble.innerHTML = '❌ 发送失败：' + e.message;
+        console.error('发送命令失败:', e);
+      }
+    }
+    
+    // 切换模型
+    async function switchModel(model) {
+      if (!model) return;
+      
+      // 检查是否已连接
+      if (!gwClient || !gwClient.authenticated) {
+        alert('请等待连接建立...');
+        return;
+      }
+      
+      // 显示用户消息
+      addMsg({content: `🔄 切换模型：${model}`, role: 'user'});
+      
+      // 显示"发送中"指示器
+      showWorkIndicator(true, '🤔 处理中...');
+      
+      // 创建 AI 消息容器
+      const aiMsg = createAIMessage();
+      const bubble = aiMsg.querySelector('.bubble');
+      bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待回复...';
+      
+      try {
+        // 发送切换模型消息
+        const result = await gwClient.sendMessage(`/model ${model}`, []);
+        console.log('切换模型成功:', result);
+        
+        // 保存当前模型到 localStorage
+        localStorage.setItem('current_model', model);
+        
+        // 重新加载模型列表以更新对号标记
+        await loadModels();
+        
+        // 隐藏指示器
+        showWorkIndicator(false);
+        bubble.innerHTML = '✅ 已切换到模型：' + model;
+        
+      } catch (e) {
+        // 隐藏指示器
+        showWorkIndicator(false);
+        // 显示错误
+        bubble.innerHTML = '❌ 切换失败：' + e.message;
+        console.error('切换模型失败:', e);
+      }
+    }
+    
     // ========== WebSocket 客户端实现 ==========
     class GatewayClient {
       constructor(url, token, sessionKey, onEvent, onConnect, onDisconnect) {
+        console.log('[GatewayClient] Constructor - sessionKey:', sessionKey);
+        
         this.url = url;
         this.token = token;
         this.sessionKey = sessionKey;
@@ -465,20 +1387,25 @@
     }
     
     // ========== 应用逻辑 ==========
-    // 强制使用 /api 代理和正确的session key（与Dashboard共享）
-    let gateway = '/api';
-    let authToken = ''; // 将在页面加载时从 config.js 初始化
-    let sessionKey = 'agent:main:main';
-    let selectedImages = []; // 存储选中的图片 [{file, base64, id}]
-    let gwClient = null; // WebSocket 客户端
     
     // 页面加载时设置默认值
     window.addEventListener('load', function() {
+      console.log('[Mobile] Page loaded, initializing...');
+      console.log('[Mobile] config.js loaded? typeof window.getToken:', typeof window.getToken);
+      console.log('[Mobile] config.js loaded? typeof window.getWebSocketUrl:', typeof window.getWebSocketUrl);
+      console.log('[Mobile] OPENCLAW_CONFIG:', window.OPENCLAW_CONFIG ? 'defined' : 'undefined');
+      if (window.OPENCLAW_CONFIG) {
+        console.log('[Mobile] defaultToken:', window.OPENCLAW_CONFIG.gateway?.defaultToken?.substring(0, 10) + '...');
+        console.log('[Mobile] defaultWsUrl:', window.OPENCLAW_CONFIG.gateway?.defaultWsUrl);
+      }
+      
       // 从 config.js 获取 token（config.js 已在外部脚本加载）
       if (window.getToken) {
         authToken = window.getToken();
+        console.log('[Mobile] Got token from config.js:', authToken ? authToken.substring(0, 10) + '...' : 'empty');
       } else {
-        authToken = localStorage.getItem('oc_token') || 'YOUR_GATEWAY_TOKEN_HERE';
+        authToken = localStorage.getItem('oc_gateway_token') || 'YOUR_GATEWAY_TOKEN_HERE';
+        console.log('[Mobile] getToken not available, using localStorage:', authToken ? authToken.substring(0, 10) + '...' : 'empty');
       }
       
       // 智能检测 WebSocket URL
@@ -489,27 +1416,65 @@
       let defaultWsUrl;
       if (window.getWebSocketUrl) {
         defaultWsUrl = window.getWebSocketUrl();
+      } else if (window.OPENCLAW_CONFIG?.gateway?.defaultWsUrl) {
+        defaultWsUrl = window.OPENCLAW_CONFIG.gateway.defaultWsUrl;
       } else {
-        // 兜底：使用配置文件中的默认值
-        defaultWsUrl = window.OPENCLAW_CONFIG?.gateway?.defaultWsUrl || 'ws://localhost:18789/';
+        // 动态构建 WebSocket URL（基于当前访问地址）
+        const wsProtocol = currentProtocol === 'https:' ? 'wss:' : 'ws:';
+        // 如果是 Tailscale 域名或 IP，使用 18789 端口
+        defaultWsUrl = `${wsProtocol}//${currentHost}:18789/`;
+        console.log('Dynamic WebSocket URL:', defaultWsUrl);
       }
       
       document.getElementById('wsUrlInput').value = defaultWsUrl;
-      console.log('Default WebSocket URL:', defaultWsUrl);
-      console.log('Location hostname:', currentHost);
-      console.log('Location protocol:', currentProtocol);
+      console.log('[Mobile] WebSocket URL set:', defaultWsUrl);
+      console.log('[Mobile] Location hostname:', currentHost);
+      console.log('[Mobile] Location protocol:', currentProtocol);
       
       document.getElementById('urlInput').value = gateway;
       document.getElementById('urlInput').disabled = true; // 代理地址固定
+      console.log('[Mobile] Gateway set:', gateway);
+      
+      // 确保 authToken 有值（备用默认值）
+      if (!authToken || authToken === 'YOUR_GATEWAY_TOKEN_HERE') {
+        // 从 OPENCLAW_CONFIG 直接获取
+        if (window.OPENCLAW_CONFIG?.gateway?.defaultToken) {
+          authToken = window.OPENCLAW_CONFIG.gateway.defaultToken;
+          console.log('[Mobile] Using fallback token from OPENCLAW_CONFIG');
+        }
+        // 如果还是没有，尝试从保存的 token 获取
+        if ((!authToken || authToken === 'YOUR_GATEWAY_TOKEN_HERE') && localStorage.getItem('oc_gateway_token')) {
+          authToken = localStorage.getItem('oc_gateway_token');
+          console.log('[Mobile] Using saved token from localStorage');
+        }
+      }
+      
       document.getElementById('tokenInput').value = authToken;
+      console.log('[Mobile] Token input value set:', document.getElementById('tokenInput').value ? document.getElementById('tokenInput').value.substring(0, 10) + '...' : 'empty');
       // tokenInput 可编辑，用户可以修改
+      
+      // 如果有保存的 token，勾选"记住 Token"
+      if (localStorage.getItem('oc_gateway_token')) {
+        document.getElementById('rememberGatewayToken').checked = true;
+      }
+      
       document.getElementById('sessionKey').value = sessionKey;
       document.getElementById('sessionKey').disabled = true; // 会话ID固定
       document.getElementById('sessionInfo').textContent = sessionKey;
+      console.log('[Mobile] Session key set:', sessionKey);
+      
+      // 最终检查：确保所有输入框都有值
+      console.log('[Mobile] === Final check ===');
+      console.log('[Mobile] wsUrlInput value:', document.getElementById('wsUrlInput').value || 'EMPTY');
+      console.log('[Mobile] tokenInput value:', document.getElementById('tokenInput').value ? 'set' : 'EMPTY');
+      console.log('[Mobile] sessionKey value:', document.getElementById('sessionKey').value || 'EMPTY');
       
       // 尝试自动登录
       if (!autoLogin()) {
         console.log('Auto-login skipped, showing login page');
+        // 显示登录页面
+        document.getElementById('login').classList.remove('hidden');
+        document.getElementById('chat').classList.add('hidden');
       }
     });
 
@@ -531,7 +1496,7 @@
 
     // 历史消息存储（使用 localStorage）
     let messageHistory = [];
-    const HISTORY_KEY = 'oc_mobile_history';
+    const HISTORY_KEY = 'oc_history';
     const MAX_HISTORY = 100;
     
     // 登录状态存储
@@ -695,41 +1660,98 @@
       authToken = document.getElementById('tokenInput').value.trim();
       sessionKey = document.getElementById('sessionKey').value.trim() || 'agent:main:main';
       
+      // 记住 Token 功能
+      const rememberGatewayToken = document.getElementById('rememberGatewayToken').checked;
+      if (rememberGatewayToken) {
+        localStorage.setItem('oc_gateway_token', authToken);
+      } else {
+        localStorage.removeItem('oc_gateway_token');
+      }
+      
       // 保存登录状态（1小时有效期）
       saveLoginState(wsUrl, authToken, sessionKey);
-      localStorage.setItem('oc_token', authToken);
+      localStorage.setItem('oc_gateway_token', authToken);
       document.getElementById('sessionInfo').textContent = sessionKey;
       
       // 进入聊天界面
       document.getElementById('login').classList.add('hidden');
       document.getElementById('chat').classList.remove('hidden');
       
+      // 加载模型列表
+      loadModels();
+      
       // 建立 WebSocket 连接
       connectWebSocket(wsUrl);
+      
+      // 同时进行 Session 登录（用于 HTTP API 认证）- 异步执行
+      doSessionLoginAsync(authToken);
+    }
+    
+    // 异步 Session 登录
+    async function doSessionLoginAsync(token) {
+      try {
+        const resp = await fetch('/api/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token})
+        });
+        
+        const data = await resp.json();
+        
+        if (data.success) {
+          localStorage.setItem('oc_session_token', data.token);
+          // 同时设置 cookie，供页面跳转使用（如 /browse/）
+          document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
+          console.log('✅ Session 登录成功');
+        } else {
+          console.warn('⚠️ Session 登录失败:', data.error);
+        }
+      } catch (e) {
+        console.error('❌ Session 登录错误:', e);
+      }
     }
     
     // 自动登录（使用保存的登录状态）
     function autoLogin() {
       const state = getLoginState();
       if (!state) {
-        console.log('No valid login state, showing login page');
+        console.log('[AutoLogin] No valid login state, showing login page');
         return false;
       }
       
-      console.log('Found valid login state, auto-connecting...');
+      console.log('[AutoLogin] Found valid login state, auto-connecting...');
+      console.log('[AutoLogin] Saved state:', { wsUrl: state.wsUrl, sessionKey: state.sessionKey });
       
       // 使用保存的状态
       authToken = state.token;
-      sessionKey = state.sessionKey;
       
-      localStorage.setItem('oc_token', authToken);
+      // 优先使用 URL 参数中的 sessionKey
+      const urlSessionKey = getSessionKeyFromURL();
+      console.log('[AutoLogin] URL sessionKey:', urlSessionKey);
+      
+      if (urlSessionKey) {
+        sessionKey = urlSessionKey;
+      } else {
+        sessionKey = state.sessionKey;
+      }
+      
+      console.log('[AutoLogin] Final sessionKey:', sessionKey);
+      
+      localStorage.setItem('oc_gateway_token', authToken);
       document.getElementById('sessionInfo').textContent = sessionKey;
       
       // 进入聊天界面
       document.getElementById('login').classList.add('hidden');
       document.getElementById('chat').classList.remove('hidden');
       
+      // 加载模型列表
+      loadModels();
+      
+      // 保存更新后的登录状态（包含新的 sessionKey）
+      saveLoginState(state.wsUrl, authToken, sessionKey);
+      
       // 建立 WebSocket 连接
+      console.log('[AutoLogin] Calling connectWebSocket with wsUrl:', state.wsUrl);
       connectWebSocket(state.wsUrl);
       
       return true;
@@ -869,7 +1891,7 @@
         console.error('加载历史消息失败:', e);
         // 如果获取失败，尝试从本地存储加载
         try {
-          const localHistory = JSON.parse(localStorage.getItem('oc_mobile_history') || '[]');
+          const localHistory = JSON.parse(localStorage.getItem('oc_history') || '[]');
           chatArea.innerHTML = '';
           if (localHistory.length > 0) {
             for (const msg of localHistory.slice(-50)) {
@@ -1057,8 +2079,22 @@
           const currentText = bubble.dataset.rawText || '';
           const newText = currentText + text;
           bubble.dataset.rawText = newText;
-          bubble.innerHTML = fmt(newText);
+          bubble.innerHTML = fmt(newText) + '<button class="tts-btn" style="display:none;" onclick="toggleTTS(this)">🔊 朗读</button>';
           scrollToBottom();
+        }
+      }
+    }
+    
+    // 切换朗读/停止
+    function toggleTTS(btn) {
+      if (currentUtterance) {
+        // 正在朗读，停止
+        stopSpeak();
+      } else {
+        // 开始朗读
+        const text = btn.parentElement.dataset.rawText;
+        if (text) {
+          speakText(text);
         }
       }
     }
@@ -1077,11 +2113,35 @@
         // 保存到历史记录
         const bubble = document.querySelector('.msg.ai:last-child .bubble');
         if (bubble && bubble.dataset.rawText) {
+          const aiContent = bubble.dataset.rawText;
           saveMessageToHistory({ 
             role: 'assistant', 
-            content: bubble.dataset.rawText, 
+            content: aiContent, 
             timestamp: Date.now() 
           });
+          
+          // 保存最后一条 AI 消息
+          lastAIMessage = aiContent;
+          
+          // 显示朗读按钮
+          const ttsBtn = bubble.querySelector('.tts-btn');
+          if (ttsBtn) {
+            ttsBtn.style.display = 'inline-flex';
+          }
+          
+          // 如果启用了自动朗读，播放最后一条消息
+          // 注意：移动端可能需要用户交互才能播放
+          if (autoPlayEnabled && aiContent) {
+            console.log('[TTS] 自动朗读最后一条消息');
+            // 延迟一点，等待用户交互上下文
+            setTimeout(() => {
+              try {
+                speakText(aiContent, true);
+              } catch (e) {
+                console.log('[TTS] 自动朗读失败，移动端可能需要用户交互:', e);
+              }
+            }, 500);
+          }
         }
       }
     }
@@ -1103,7 +2163,8 @@
         if (aiMsg && message) {
           const content = extractContent(message);
           if (content) {
-            aiMsg.innerHTML = fmt(content);
+            aiMsg.dataset.rawText = content;
+            aiMsg.innerHTML = fmt(content) + '<button class="tts-btn" style="display:none;" onclick="toggleTTS(this)">🔊 朗读</button>';
             scrollToBottom();
           }
         }
@@ -1197,13 +2258,33 @@
         // 完成
         showWorkIndicator(false);
         
-        // 保存到历史记录（如果之前没有保存）
         const aiMsg = document.querySelector('.msg.ai:last-child .bubble');
+        
+        // 处理 final 状态的消息内容（可能没有 delta 状态）
+        if (message && aiMsg) {
+          const content = extractContent(message);
+          if (content && content.trim()) {
+            aiMsg.dataset.rawText = content;
+            aiMsg.innerHTML = fmt(content) + '<button class="tts-btn" style="display:none;" onclick="toggleTTS(this)">🔊 朗读</button>';
+            scrollToBottom();
+          }
+        }
+        
+        // 保存到历史记录（如果之前没有保存）
         if (aiMsg) {
           const content = aiMsg.innerText;
           if (content && content !== '⏳ 响应完成') {
             saveMessageToHistory({ role: 'assistant', content: content, timestamp: Date.now() });
           }
+          
+          // 显示朗读按钮
+          const ttsBtn = aiMsg.querySelector('.tts-btn');
+          if (ttsBtn) {
+            ttsBtn.style.display = 'inline-flex';
+          }
+          
+          // 保存最后一条 AI 消息
+          lastAIMessage = aiMsg.dataset.rawText || content;
         }
         
         document.getElementById('sendBtn').disabled = false;
@@ -1295,7 +2376,6 @@
     function showErr(msg) {
       document.getElementById('loginErr').textContent = msg;
       document.getElementById('loginErr').style.display = 'block';
-      document.getElementById('loginErr').style.display = 'block';
       console.error('Error:', msg);
     }
 
@@ -1303,9 +2383,10 @@
       const input = document.getElementById('msgInput');
       const content = input.value.trim();
       const imagesToSend = selectedImages.length > 0 ? [...selectedImages] : []; // 复制图片数组
+      const filesToSend = selectedFiles.length > 0 ? [...selectedFiles] : []; // 复制文件数组
       
-      // 检查是否有内容或图片
-      if (!content && imagesToSend.length === 0) return;
+      // 检查是否有内容、图片或文件
+      if (!content && imagesToSend.length === 0 && filesToSend.length === 0) return;
       
       // 检查 WebSocket 是否已连接
       if (!gwClient || !gwClient.authenticated) {
@@ -1314,9 +2395,10 @@
       }
 
       // 显示用户消息
-      if (imagesToSend.length > 0) {
-        const area = document.getElementById('chatArea');
-        const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      const area = document.getElementById('chatArea');
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      
+      if (imagesToSend.length > 0 || filesToSend.length > 0) {
         const div = document.createElement('div');
         div.className = 'msg user';
         
@@ -1325,16 +2407,31 @@
         for (const img of imagesToSend) {
           imgHtml += '<img src="' + img.base64 + '" style="max-width: 150px; max-height: 150px; border-radius: 12px; margin: 4px; display: inline-block;">';
         }
+        
+        // 生成文件列表 HTML
+        let fileHtml = '';
+        for (const file of filesToSend) {
+          const icon = getFileIcon(file.name, file.type);
+          fileHtml += `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg3);border-radius:8px;margin:4px 0;">
+            <span style="font-size:20px">${icon}</span>
+            <div>
+              <div style="font-size:13px">${escapeHtml(file.name)}</div>
+              <div style="font-size:11px;color:var(--text2)">${formatFileSize(file.size)}</div>
+            </div>
+          </div>`;
+        }
+        
         let textHtml = content ? '<div>' + fmt(content) + '</div>' : '';
-        div.innerHTML = '<div class="av">👤</div><div class="bubble">' + imgHtml + textHtml + '<div class="time">' + time + '</div></div>';
+        div.innerHTML = '<div class="av">👤</div><div class="bubble">' + imgHtml + fileHtml + textHtml + '<div class="time">' + time + '</div></div>';
         area.appendChild(div);
         
-        // 保存用户消息到历史记录（包含多张图片）
+        // 保存用户消息到历史记录
         const userMsg = {
           role: 'user',
           content: [
-            { type: 'text', text: content || `请分析这${imagesToSend.length}张图片` },
-            ...imagesToSend.map(img => ({ type: 'image', url: img.base64 }))
+            ...(content ? [{ type: 'text', text: content }] : []),
+            ...imagesToSend.map(img => ({ type: 'image', url: img.base64 })),
+            ...filesToSend.map(file => ({ type: 'file', name: file.name, size: file.size, mimeType: file.type, path: file.serverPath }))
           ],
           timestamp: Date.now()
         };
@@ -1345,7 +2442,9 @@
       }
       
       input.value = '';
+      resetInputHeight(); // 重置输入框高度
       clearImages(); // 清除所有图片
+      clearFiles(); // 清除所有文件
       document.getElementById('sendBtn').disabled = true;
       scrollToBottom();
 
@@ -1362,26 +2461,55 @@
       try {
         // 通过 WebSocket 发送消息
         let attachments = [];
+        
+        // 处理图片
         if (imagesToSend.length > 0) {
-          // 处理所有图片 - 同时使用 base64 和服务器路径
           for (const imgToSend of imagesToSend) {
             if (imgToSend.base64 && imgToSend.base64.startsWith('data:')) {
-              // 提取 base64 数据
               const match = imgToSend.base64.match(/^data:(image\/[^;]+);base64,(.+)$/);
               if (match) {
                 attachments.push({ 
                   type: 'image', 
                   mimeType: match[1], 
-                  content: match[2],  // base64 数据
-                  path: imgToSend.serverPath  // 服务器路径（可选，供日志记录）
+                  content: match[2],
+                  path: imgToSend.serverPath
                 });
                 console.log('[DEBUG] 发送图片, 服务器路径:', imgToSend.serverPath);
               }
             }
           }
         }
-        console.log('[DEBUG] 发送图片数量:', imagesToSend.length, 'attachments:', attachments.length);
-        await gwClient.sendMessage(content || `请分析这${imagesToSend.length}张图片`, attachments);
+        
+        // 处理文件
+        if (filesToSend.length > 0) {
+          for (const fileToSend of filesToSend) {
+            // 读取文件内容
+            const fileContent = await readFileAsBase64(fileToSend.file);
+            const match = fileContent.match(/^data:([^;]+);base64,(.+)$/);
+            if (match) {
+              attachments.push({
+                type: 'file',
+                mimeType: fileToSend.type || match[1],
+                content: match[2],
+                filename: fileToSend.name,
+                path: fileToSend.serverPath
+              });
+              console.log('[DEBUG] 发送文件:', fileToSend.name, '服务器路径:', fileToSend.serverPath);
+            }
+          }
+        }
+        
+        // 生成消息文本
+        let messageText = content;
+        if (imagesToSend.length > 0 && !content) {
+          messageText = `请分析这${imagesToSend.length}张图片`;
+        } else if (filesToSend.length > 0 && !content) {
+          const fileNames = filesToSend.map(f => f.name).join(', ');
+          messageText = `请分析以下文件：${fileNames}`;
+        }
+        
+        console.log('[DEBUG] 发送图片数量:', imagesToSend.length, '文件数量:', filesToSend.length, 'attachments:', attachments.length);
+        await gwClient.sendMessage(messageText, attachments);
         
         // 消息已发送，等待流式响应
         bubble.innerHTML = '<span class="thinking-icon">🤔</span> 等待响应...';
@@ -1480,9 +2608,46 @@
       document.body.appendChild(overlay);
     }
 
-    document.getElementById('msgInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+    // 输入框多行支持
+    const msgInput = document.getElementById('msgInput');
+    const inputWrap = document.querySelector('.input-wrap');
+    const chatArea = document.getElementById('chatArea');
+    
+    // 自动调整高度并同步聊天区域
+    function autoResize() {
+      msgInput.style.height = 'auto';
+      const newHeight = Math.min(msgInput.scrollHeight, 120);
+      msgInput.style.height = newHeight + 'px';
+      msgInput.style.overflowY = msgInput.scrollHeight > 120 ? 'auto' : 'hidden';
+      
+      // 同步更新聊天区域的底部 padding
+      const inputWrapHeight = inputWrap.offsetHeight;
+      document.documentElement.style.setProperty('--input-height', inputWrapHeight + 'px');
+    }
+    
+    // 重置输入框高度（发送消息后）
+    function resetInputHeight() {
+      msgInput.style.height = 'auto';
+      msgInput.rows = 1;
+      autoResize();
+    }
+    
+    // 监听输入事件，自动调整高度
+    msgInput.addEventListener('input', autoResize);
+    
+    // Enter 发送，Shift+Enter 换行
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        sendMsg(); 
+      }
     });
+    
+    // 监听窗口大小变化，重新计算
+    window.addEventListener('resize', autoResize);
+    
+    // 初始化高度
+    setTimeout(autoResize, 100);
     
     
     // 图片选择处理 - 支持多图（最多 9 张）
@@ -1547,9 +2712,11 @@
     
     // 上传图片到服务器
     async function uploadImage(imgBase64) {
+      const headers = getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
       const response = await fetch(window.location.origin + '/api/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers,
         body: JSON.stringify({ image: imgBase64 })
       });
       
@@ -1639,6 +2806,281 @@
     
     // 移除已选择的图片
     function removeImg() { clearImages(); }
+
+    // 切换模型菜单显示/隐藏
+    function toggleModelMenu() {
+      const menu = document.getElementById('modelMenu');
+      const btn = document.getElementById('modelBtn');
+      menu.classList.toggle('show');
+      btn.classList.toggle('active');
+    }
+    
+    // 关闭模型菜单
+    function closeModelMenu() {
+      const menu = document.getElementById('modelMenu');
+      const btn = document.getElementById('modelBtn');
+      menu.classList.remove('show');
+      btn.classList.remove('active');
+    }
+    
+    // 加载模型列表
+    async function loadModels() {
+      const modelBtn = document.getElementById('modelBtn');
+      const btnText = document.getElementById('modelBtnText');
+      
+      // 显示加载状态
+      modelBtn.classList.add('loading');
+      btnText.textContent = '🔄 加载中...';
+      
+      try {
+        const resp = await fetch('/api/models');
+        const data = await resp.json();
+        
+        if (data.models) {
+          const menu = document.getElementById('modelMenu');
+          
+          // 获取当前模型 - 只从 localStorage 读取
+          let currentModel = localStorage.getItem('current_model') || '';
+          
+          if (!currentModel && data.current) {
+            currentModel = data.current;
+            console.log('使用默认模型:', currentModel);
+          }
+          
+          console.log('当前模型:', currentModel);
+          
+          // 构建菜单 HTML
+          let html = '';
+          let currentName = '🔄 模型';
+          
+          data.models.forEach(model => {
+            const modelId = model.id || model;
+            const modelName = model.name || model;
+            const isCurrent = modelId === currentModel;
+            
+            // 解析模型名称和提供商
+            let displayName = modelName;
+            let provider = '';
+            const match = modelName.match(/^(.+?)\s*\(([^)]+)\)$/);
+            if (match) {
+              displayName = match[1].trim();
+              provider = match[2];
+            }
+            
+            if (isCurrent) {
+              currentName = displayName;
+            }
+            
+            html += `
+              <div class="model-menu-item ${isCurrent ? 'selected' : ''}" onclick="selectModel('${modelId}')">
+                <span class="model-name">${displayName}</span>
+                ${provider ? `<span class="model-provider">(${provider})</span>` : ''}
+                <span class="check">✓</span>
+              </div>
+            `;
+          });
+          
+          menu.innerHTML = html;
+          
+          // 更新按钮文本 - 只显示模型名称，不显示提供商
+          let shortName = currentName;
+          const match = currentName.match(/^(.+?)\s*\(([^)]+)\)$/);
+          if (match) {
+            shortName = match[1].trim();
+          }
+          btnText.textContent = shortName || '🔄 模型';
+          
+          // 更新按钮标题
+          if (currentModel) {
+            modelBtn.title = '当前模型：' + currentName;
+          }
+        }
+      } catch (e) {
+        console.error('加载模型列表失败:', e);
+        btnText.textContent = '⚠️ 加载失败';
+      } finally {
+        // 移除加载状态
+        modelBtn.classList.remove('loading');
+      }
+    }
+    
+    // 选择模型
+    function selectModel(modelId) {
+      closeModelMenu();
+      switchModel(modelId);
+    }
+
+    
+    // ========== 文件选择处理 ==========
+    // selectedFiles 已在全局变量中声明
+    
+    // 文件图标映射
+    function getFileIcon(filename, mimeType) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const icons = {
+        'pdf': '📄', 'doc': '📝', 'docx': '📝', 'xls': '📊', 'xlsx': '📊',
+        'ppt': '📽️', 'pptx': '📽️', 'zip': '📦', 'tar': '📦', 'gz': '📦',
+        'txt': '📃', 'md': '📝', 'json': '📋', 'xml': '📋',
+        'js': '💻', 'ts': '💻', 'py': '🐍', 'sh': '⚡',
+        'html': '🌐', 'css': '🎨', 'csv': '📈', 'log': '📋',
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'webp': '🖼️',
+        'mp4': '🎬', 'webm': '🎬', 'mp3': '🎵', 'wav': '🎵',
+      };
+      return icons[ext] || '📎';
+    }
+    
+    // 格式化文件大小
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    
+    // 处理文件选择
+    async function handleFileSelect() {
+      const input = document.getElementById('fileInput');
+      const files = Array.from(input.files);
+      if (files.length === 0) return;
+      
+      // 检查文件数量（最多 5 个）
+      if (selectedFiles.length + files.length > 5) {
+        alert('最多只能选择 5 个文件');
+        input.value = '';
+        return;
+      }
+      
+      // 检查文件大小 (最大 50MB)
+      for (const file of files) {
+        if (file.size > 50 * 1024 * 1024) {
+          alert('文件大小不能超过 50MB: ' + file.name);
+          input.value = '';
+          return;
+        }
+      }
+      
+      // 显示上传指示器
+      showWorkIndicator(true, '📤 上传文件...');
+      
+      // 处理每个文件
+      for (const file of files) {
+        try {
+          // 读取文件为 base64
+          const fileBase64 = await readFileAsBase64(file);
+          
+          // 上传到服务器
+          const serverPath = await uploadFile(fileBase64, file.name, file.type);
+          
+          // 添加到已选择列表
+          const id = Date.now() + Math.random();
+          selectedFiles.push({ 
+            file, 
+            serverPath,
+            id,
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
+          
+          console.log('[DEBUG] 文件上传成功:', serverPath);
+        } catch (err) {
+          console.error('文件上传失败:', err);
+          alert('文件上传失败: ' + err.message);
+        }
+      }
+      
+      // 隐藏上传指示器
+      showWorkIndicator(false);
+      
+      // 更新预览
+      updateFilePreview();
+      
+      // 清空 input，允许重复选择同一文件
+      input.value = '';
+    }
+    
+    // 读取文件为 base64
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          resolve(e.target.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+    
+    // 上传文件到服务器
+    async function uploadFile(fileBase64, filename, mimeType) {
+      const headers = getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+      const response = await fetch(window.location.origin + '/api/upload', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ 
+          file: fileBase64, 
+          filename: filename,
+          mimeType: mimeType
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('上传失败: ' + response.status);
+      }
+      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || '上传失败');
+      }
+      
+      return data.path;  // 返回服务器保存路径
+    }
+    
+    // 更新文件预览
+    function updateFilePreview() {
+      const preview = document.getElementById('filePreview');
+      const fileList = document.getElementById('fileList');
+      const fileCount = document.getElementById('fileCount');
+      
+      if (selectedFiles.length === 0) {
+        preview.style.display = 'none';
+        fileList.innerHTML = '';
+        fileCount.textContent = '';
+        return;
+      }
+      
+      preview.style.display = 'flex';
+      preview.classList.add('has-file');
+      
+      // 生成预览 HTML
+      fileList.innerHTML = selectedFiles.map((item, index) => `
+        <div class="file-item">
+          <span class="file-icon">${getFileIcon(item.name, item.type)}</span>
+          <div class="file-info">
+            <span class="file-name">${escapeHtml(item.name)}</span>
+            <span class="file-size">${formatFileSize(item.size)}</span>
+          </div>
+          <button class="file-remove" onclick="removeFile(${item.id})" title="移除">×</button>
+        </div>
+      `).join('');
+      
+      // 显示数量
+      fileCount.textContent = `${selectedFiles.length}个文件`;
+    }
+    
+    // 移除单个文件
+    function removeFile(id) {
+      selectedFiles = selectedFiles.filter(item => item.id !== id);
+      updateFilePreview();
+    }
+    
+    // 清空所有文件
+    function clearFiles() {
+      selectedFiles = [];
+      updateFilePreview();
+    }
     
     // ========== 导航面板 ==========
     function toggleNav() {
@@ -1663,14 +3105,200 @@
       menuBtn.classList.remove('active');
       menuBtn.textContent = '☰';
     }
+    
+    // ========== 文字转语音 (TTS) ==========
+    
+    // 初始化 TTS
+    function initTTS() {
+      if ('speechSynthesis' in window) {
+        console.log('[TTS] Web Speech API 已支持');
+        return true;
+      } else {
+        console.log('[TTS] Web Speech API 不支持');
+        return false;
+      }
+    }
+    
+    // 朗读文本
+    function speakText(text, auto = false) {
+      if (!('speechSynthesis' in window)) {
+        alert('您的浏览器不支持语音合成');
+        return false;
+      }
+      
+      // 停止当前播放
+      if (currentUtterance) {
+        window.speechSynthesis.cancel();
+      }
+      
+      // 清理文本（移除 Markdown 格式）
+      const cleanText = text
+        .replace(/```[\s\S]*?```/g, '')  // 移除代码块
+        .replace(/`[^`]+`/g, '')  // 移除行内代码
+        .replace(/\*\*([^*]+)\*\*/g, '$1')  // 移除加粗
+        .replace(/\*([^*]+)\*/g, '$1')  // 移除斜体
+        .replace(/#{1,6}\s+/g, '')  // 移除标题
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')  // 移除链接，保留文本
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, '')  // 移除图片
+        .replace(/^\s*[-*+]\s+/gm, '')  // 移除列表标记
+        .replace(/^\s*\d+\.\s+/gm, '')  // 移除数字列表
+        .replace(/\n+/g, '。')  // 换行替换为句号
+        .replace(/\s+/g, ' ')  // 合并空格
+        .trim();
+      
+      if (!cleanText) {
+        return false;
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'zh-CN';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      // 获取可用语音
+      const voices = window.speechSynthesis.getVoices();
+      let zhVoice = voices.find(v => v.lang.includes('zh'));
+      if (zhVoice) {
+        utterance.voice = zhVoice;
+      } else {
+        utterance.lang = 'en-US';
+      }
+      
+      utterance.onstart = () => {
+        showTTSSpeaking(true);
+        updateTTSButtonState(true);
+      };
+      
+      utterance.onend = () => {
+        currentUtterance = null;
+        showTTSSpeaking(false);
+        updateTTSButtonState(false);
+      };
+      
+      utterance.onerror = (e) => {
+        currentUtterance = null;
+        showTTSSpeaking(false);
+        updateTTSButtonState(false);
+      };
+      
+      currentUtterance = utterance;
+      window.speechSynthesis.speak(utterance);
+      return true;
+    }
+    
+    // 停止朗读
+    function stopSpeak() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        currentUtterance = null;
+        showTTSSpeaking(false);
+        updateTTSButtonState(false);
+      }
+    }
+    
+    // 更新 TTS 按钮状态
+    function updateTTSButtonState(isSpeaking) {
+      // 更新所有朗读按钮
+      const ttsBtns = document.querySelectorAll('.tts-btn');
+      ttsBtns.forEach(btn => {
+        if (isSpeaking) {
+          btn.textContent = '⏹️ 停止';
+          btn.classList.add('speaking');
+        } else {
+          btn.textContent = '🔊 朗读';
+          btn.classList.remove('speaking');
+        }
+      });
+    }
+    
+    // 朗读最后一条 AI 消息
+    function speakLastAIMessage() {
+      if (lastAIMessage) {
+        speakText(lastAIMessage);
+      } else {
+        // 尝试从 DOM 获取最后一条 AI 消息
+        const lastBubble = document.querySelector('.msg.ai:last-child .bubble');
+        if (lastBubble) {
+          const text = lastBubble.textContent || lastBubble.innerText;
+          speakText(text);
+        }
+      }
+    }
+    
+    // 显示/隐藏 TTS 播放状态
+    function showTTSSpeaking(speaking) {
+      const indicator = document.getElementById('ttsIndicator');
+      if (indicator) {
+        indicator.style.display = speaking ? 'flex' : 'none';
+      }
+    }
+    
+    // 切换自动朗读
+    function toggleAutoPlay() {
+      autoPlayEnabled = !autoPlayEnabled;
+      localStorage.setItem('tts_autoPlay', autoPlayEnabled);
+      updateTTSButton();
+      console.log('[TTS] 自动朗读:', autoPlayEnabled ? '开启' : '关闭');
+    }
+    
+    // 更新 TTS 按钮状态
+    function updateTTSButton() {
+      const btn = document.getElementById('ttsToggle');
+      const menuIcon = document.getElementById('ttsMenuIcon');
+      const menuText = document.getElementById('ttsMenuText');
+      
+      if (btn) {
+        btn.classList.toggle('active', autoPlayEnabled);
+        btn.title = autoPlayEnabled ? '自动朗读已开启' : '自动朗读已关闭';
+        btn.textContent = autoPlayEnabled ? '🔊' : '🔇';
+      }
+      
+      if (menuIcon) {
+        menuIcon.textContent = autoPlayEnabled ? '🔊' : '🔇';
+      }
+      
+      if (menuText) {
+        menuText.textContent = autoPlayEnabled ? '自动朗读：开启' : '自动朗读：关闭';
+      }
+    }
+    
+    // 页面加载时初始化 TTS
+    document.addEventListener('DOMContentLoaded', function() {
+      // 初始化 TTS
+      initTTS();
+      
+      // 恢复自动朗读设置
+      autoPlayEnabled = localStorage.getItem('tts_autoPlay') === 'true';
+      updateTTSButton();
+      
+      // 预加载语音列表
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.getVoices();
+        };
+      }
+      
+      // 初始化语言
+      if (typeof i18n !== 'undefined') {
+        i18n.init();
+      }
+      
+      // 初始化输入框高度
+      setTimeout(() => {
+        const msgInput = document.getElementById('msgInput');
+        if (msgInput) {
+          msgInput.style.height = 'auto';
+          const newHeight = Math.min(msgInput.scrollHeight, 120);
+          msgInput.style.height = Math.max(newHeight, 44) + 'px';
+        }
+      }, 100);
+    });
   </script>
   <script src="i18n.js"></script>
   <script src="config.js"></script>
   <script>
-    // 初始化语言
-    document.addEventListener('DOMContentLoaded', function() {
-      i18n.init();
-    });
     
     // 语言切换函数
     function toggleLang() {
