@@ -13,8 +13,8 @@ const i18n = {
   languages: {
     'zh-CN': {
       // 通用
-      appName: '小强 AI',
-      appDesc: 'AI 家庭助手',
+      appName: '小鱼 AI',
+      appDesc: 'AI 工作助手',
       
       // 登录页
       wsUrlPlaceholder: 'WebSocket地址',
@@ -87,8 +87,8 @@ const i18n = {
     
     'en-US': {
       // General
-      appName: 'XiaoQiang AI',
-      appDesc: 'AI Family Assistant',
+      appName: 'XiaoYu AI',
+      appDesc: 'AI Work Assistant',
       
       // Login
       wsUrlPlaceholder: 'WebSocket URL',
@@ -197,13 +197,21 @@ const i18n = {
     }
     
     // 从配置文件读取应用名称（如果存在）
+    // 同时更新两种语言，确保切换语言时也能正确显示
     if (typeof window.OPENCLAW_CONFIG !== 'undefined' && OPENCLAW_CONFIG.app) {
-      if (this.currentLang === 'zh-CN') {
-        this.languages['zh-CN'].appName = OPENCLAW_CONFIG.app.appName || this.languages['zh-CN'].appName;
-        this.languages['zh-CN'].appDesc = OPENCLAW_CONFIG.app.appDesc || this.languages['zh-CN'].appDesc;
-      } else {
-        this.languages['en-US'].appName = OPENCLAW_CONFIG.app.appNameEn || this.languages['en-US'].appName;
-        this.languages['en-US'].appDesc = OPENCLAW_CONFIG.app.appDescEn || this.languages['en-US'].appDesc;
+      // 更新中文配置
+      if (OPENCLAW_CONFIG.app.appName) {
+        this.languages['zh-CN'].appName = OPENCLAW_CONFIG.app.appName;
+      }
+      if (OPENCLAW_CONFIG.app.appDesc) {
+        this.languages['zh-CN'].appDesc = OPENCLAW_CONFIG.app.appDesc;
+      }
+      // 更新英文配置
+      if (OPENCLAW_CONFIG.app.appNameEn) {
+        this.languages['en-US'].appName = OPENCLAW_CONFIG.app.appNameEn;
+      }
+      if (OPENCLAW_CONFIG.app.appDescEn) {
+        this.languages['en-US'].appDesc = OPENCLAW_CONFIG.app.appDescEn;
       }
     }
     

@@ -13,12 +13,12 @@ const OPENCLAW_CONFIG = {
   // ===========================================
   app: {
     // 应用名称（显示在页面顶部）
-    appName: '小强 AI',
-    appNameEn: 'XiaoQiang AI',
+    appName: '小鱼 AI',
+    appNameEn: 'XiaoYu AI',
     
     // 应用描述
-    appDesc: 'AI 家庭助手',
-    appDescEn: 'AI Family Assistant',
+    appDesc: 'AI 工作助手',
+    appDescEn: 'AI Work Assistant',
   },
   
   // ===========================================

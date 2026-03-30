@@ -321,9 +321,9 @@ vim ~/.openclaw/workspace/server_config.py
 const OPENCLAW_CONFIG = {
   // 应用自定义
   app: {
-    appName: '小强 AI',           // 中文名称
-    appNameEn: 'XiaoQiang AI',   // 英文名称
-    appDesc: 'AI 家庭助手',
+    appName: '小鱼 AI',           // 中文名称
+    appNameEn: 'XiaoYu AI',   // 英文名称
+    appDesc: 'AI 工作助手',
     appDescEn: 'AI Family Assistant',
   },
   

@@ -80,9 +80,9 @@ vim ../server_config.py
 const OPENCLAW_CONFIG = {
   // App customization
   app: {
-    appName: '小强 AI',           // Chinese name
-    appNameEn: 'XiaoQiang AI',   // English name
-    appDesc: 'AI 家庭助手',
+    appName: '小鱼 AI',           // Chinese name
+    appNameEn: 'XiaoYu AI',   // English name
+    appDesc: 'AI 工作助手',
     appDescEn: 'AI Family Assistant',
   },
   
