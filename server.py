@@ -138,6 +138,7 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         '/api/upload',
         '/api/command',
         '/api/sessions',
+        '/browse/',  # 文件浏览需要认证
     ]
     
     # 公开路径（不需要认证）
@@ -152,7 +153,7 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         '/api/models',
         '/api/model',
         '/dashboard/',
-        '/browse/',  # 文件浏览（公开访问）
+        # '/browse/',  # 文件浏览需要认证，由 _check_auth 处理
     ]
     
     def log_message(self, format, *args):
@@ -211,7 +212,36 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
                 return True
         
         self.log_message("[Auth] 验证失败")
-        # 未认证，返回 401
+        
+        # 如果是 /browse/ 请求，返回 HTML 跳转而不是 JSON 401
+        if self.path.startswith('/browse/'):
+            # 保存原始路径到 localStorage，让登录后可以返回
+            browse_path = self.path
+            redirect_html = f'''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请先登录</title>
+    <script>
+    localStorage.setItem('pendingBrowsePath', '{browse_path}');
+    window.location.href = '/mobile.html';
+    </script>
+</head>
+<body>
+    <p>正在跳转到登录页面...</p>
+    <p>如果页面没有跳转，<a href="/mobile.html">点击这里</a>。</p>
+</body>
+</html>'''
+            self.send_response(302)  # Redirect
+            self.send_header('Location', '/mobile.html')
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', len(redirect_html.encode('utf-8')))
+            self.end_headers()
+            self.wfile.write(redirect_html.encode('utf-8'))
+            return False
+        
+        # 其他请求返回 JSON 401
         self._send_json_response(401, {'error': 'Unauthorized', 'message': '请先登录'})
         return False
     
@@ -263,8 +293,10 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self._serve_media_file(self.path[7:])
             return
         
-        # 目录浏览（公开访问，已在 PUBLIC_PATHS 中配置）
+        # 目录浏览（需要认证）
         if self.path.startswith('/browse/'):
+            if not self._check_auth():
+                return  # _check_auth 已发送 401 响应
             self._serve_directory_listing(self.path[8:])
             return
         
@@ -345,6 +377,11 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         # 登录 API（公开）
         if self.path == '/api/login':
             self._handle_login(content_length)
+            return
+        
+        # Logout API（清除 Server 端 session）
+        if self.path == '/api/logout':
+            self._handle_logout()
             return
         
         # 命令执行 API（需要认证）
@@ -721,6 +758,51 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         .sort-link:hover {{ color: #0a84ff; background: rgba(10,132,255,0.1); }}
         .sort-link.active {{ color: #0a84ff; font-weight: 600; background: rgba(10,132,255,0.15); }}
     </style>
+    <script>
+    // ========== 文件浏览 Session 认证 ==========
+    (async function() {{
+        const currentPath = window.location.pathname;
+        if (!currentPath.startsWith('/browse/')) return;
+
+        async function checkSessionAuth() {{
+            const sessionToken = localStorage.getItem('oc_session_token');
+            if (!sessionToken) return false;
+            try {{
+                const resp = await fetch('/api/sessions', {{
+                    headers: {{'Authorization': 'Bearer ' + sessionToken}}
+                }});
+                return resp.status !== 401;
+            }} catch (e) {{ return false; }}
+        }}
+
+        async function tryAutoLogin() {{
+            const savedToken = localStorage.getItem('oc_gateway_token');
+            if (!savedToken) return false;
+            try {{
+                const resp = await fetch('/api/login', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{token: savedToken}})
+                }});
+                const data = await resp.json();
+                if (data.success) {{
+                    localStorage.setItem('oc_session_token', data.token);
+                    document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
+                    return true;
+                }}
+            }} catch (e) {{}}
+            return false;
+        }}
+
+        let isValid = await checkSessionAuth();
+        if (!isValid) {{ isValid = await tryAutoLogin(); }}
+
+        if (!isValid) {{
+            localStorage.setItem('pendingBrowsePath', currentPath);
+            window.location.href = '/mobile.html';
+        }}
+    }})();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -1368,6 +1450,35 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self.log_message("Gateway 请求错误: %s", str(e))
             return {'error': f'Gateway 请求失败: {str(e)}'}
     
+    def _handle_logout(self):
+        """处理 Logout 请求 - 清除 Server 端 session"""
+        # 获取 session token
+        auth_header = self.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            oc_session_token = auth_header[7:]
+        else:
+            oc_session_token = self._get_cookie('oc_session_token')
+        
+        if oc_session_token:
+            client_ip = self.client_address[0]
+            self.log_message("[Logout] 清除 session: token=%s, ip=%s", 
+                          oc_session_token[:20] if oc_session_token else 'None', client_ip)
+            
+            # 从 session_manager 中删除 session
+            if oc_session_token in session_manager.sessions:
+                del session_manager.sessions[oc_session_token]
+                self.log_message("[Logout] Session 已删除")
+            
+            # 清除 cookie
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Set-Cookie', 'oc_session_token=; path=/; max-age=0')
+            self.end_headers()
+            self.wfile.write(json.dumps({'success': True, 'message': '已退出登录'}).encode('utf-8'))
+        else:
+            # 没有 session token，返回成功（已经登出）
+            self._send_json_response(200, {'success': True, 'message': '已退出登录'})
+
     def _handle_models(self):
         """处理模型列表请求 - 从 Gateway 配置动态获取"""
         try:
