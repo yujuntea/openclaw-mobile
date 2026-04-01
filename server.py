@@ -12,6 +12,7 @@ import http.server
 import socketserver
 import urllib.request
 import urllib.error
+from urllib.parse import unquote
 import json
 import os
 import sys
@@ -133,7 +134,6 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
     
     # 需要认证的路径
     PROTECTED_PATHS = [
-        '/browse/',
         '/media/',
         '/api/upload',
         '/api/command',
@@ -152,6 +152,7 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         '/api/models',
         '/api/model',
         '/dashboard/',
+        '/browse/',  # 文件浏览（公开访问）
     ]
     
     def log_message(self, format, *args):
@@ -262,10 +263,8 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self._serve_media_file(self.path[7:])
             return
         
-        # 目录浏览（需要认证）
+        # 目录浏览（公开访问，已在 PUBLIC_PATHS 中配置）
         if self.path.startswith('/browse/'):
-            if not self._check_auth():
-                return
             self._serve_directory_listing(self.path[8:])
             return
         
@@ -498,6 +497,7 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
     
     def _serve_directory_listing(self, path):
+        self.log_message("DEBUG: path=%s", path)
         """提供目录列表"""
         try:
             # 解析路径: browse/media/xxx 或 browse/workspace/xxx
@@ -522,6 +522,8 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
             dir_name = parts[0]
             sub_path = '/'.join(parts[1:]) if len(parts) > 1 else ''
             base_dir = BROWSABLE_DIRS[dir_name]
+            # URL解码支持中文文件名
+            sub_path = unquote(sub_path)
             full_path = os.path.join(base_dir, sub_path) if sub_path else base_dir
             
             # 安全检查
