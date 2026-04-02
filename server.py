@@ -758,51 +758,6 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
         .sort-link:hover {{ color: #0a84ff; background: rgba(10,132,255,0.1); }}
         .sort-link.active {{ color: #0a84ff; font-weight: 600; background: rgba(10,132,255,0.15); }}
     </style>
-    <script>
-    // ========== 文件浏览 Session 认证 ==========
-    (async function() {{
-        const currentPath = window.location.pathname;
-        if (!currentPath.startsWith('/browse/')) return;
-
-        async function checkSessionAuth() {{
-            const sessionToken = localStorage.getItem('oc_session_token');
-            if (!sessionToken) return false;
-            try {{
-                const resp = await fetch('/api/sessions', {{
-                    headers: {{'Authorization': 'Bearer ' + sessionToken}}
-                }});
-                return resp.status !== 401;
-            }} catch (e) {{ return false; }}
-        }}
-
-        async function tryAutoLogin() {{
-            const savedToken = localStorage.getItem('oc_gateway_token');
-            if (!savedToken) return false;
-            try {{
-                const resp = await fetch('/api/login', {{
-                    method: 'POST',
-                    headers: {{'Content-Type': 'application/json'}},
-                    body: JSON.stringify({{token: savedToken}})
-                }});
-                const data = await resp.json();
-                if (data.success) {{
-                    localStorage.setItem('oc_session_token', data.token);
-                    document.cookie = 'oc_session_token=' + data.token + '; path=/; max-age=86400';
-                    return true;
-                }}
-            }} catch (e) {{}}
-            return false;
-        }}
-
-        let isValid = await checkSessionAuth();
-        if (!isValid) {{ isValid = await tryAutoLogin(); }}
-
-        if (!isValid) {{
-            localStorage.setItem('pendingBrowsePath', currentPath);
-            window.location.href = '/mobile.html';
-        }}
-    }})();
-    </script>
 </head>
 <body>
     <div class="container">
