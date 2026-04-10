@@ -2859,11 +2859,14 @@
         if (data.models) {
           const menu = document.getElementById('modelMenu');
           
-          // 获取当前模型 - 以 Gateway 实际模型为准
+          // 获取当前模型 - localStorage 优先，Gateway 作为初始默认值
+          // 原因：Gateway /api/models 返回的是配置文件的默认模型，不是运行时实际模型
+          // 用户手动切换后，localStorage 才是实际模型的准确来源
           const gatewayCurrent = data.current || '';
-          const currentModel = gatewayCurrent;
+          const localStorageModel = localStorage.getItem('current_model') || '';
+          const currentModel = localStorageModel || gatewayCurrent;
           
-          console.log('当前模型 (Gateway):', currentModel);
+          console.log('当前模型:', currentModel, '(localStorage:', localStorageModel, ', Gateway默认:', gatewayCurrent, ')');
           
           // 构建菜单 HTML
           let html = '';
@@ -3323,5 +3326,5 @@
   </script>
 </body>
 </html>
-<!-- Updated: 2026-04-11 00:48:00 CST -->
-<!-- Version: 2026-04-11-0048-model-fix -->
+<!-- Updated: 2026-04-11 00:55:00 CST -->
+<!-- Version: 2026-04-11-0055-localstorage-priority -->
