@@ -2859,15 +2859,25 @@
         if (data.models) {
           const menu = document.getElementById('modelMenu');
           
-          // 获取当前模型 - 只从 localStorage 读取
-          let currentModel = localStorage.getItem('current_model') || '';
+          // 获取当前模型 - 优先使用 Gateway 实际当前模型，localStorage 作为用户覆盖
+          const localStorageModel = localStorage.getItem('current_model') || '';
+          const gatewayCurrent = data.current || '';
           
-          if (!currentModel && data.current) {
-            currentModel = data.current;
-            console.log('使用默认模型:', currentModel);
+          // 如果 localStorage 有值且不是 Gateway 的当前模型，说明用户手动切换过，优先用用户的
+          // 如果 localStorage 为空或与 Gateway 一致，使用 Gateway 的当前模型
+          let currentModel;
+          if (localStorageModel && localStorageModel !== gatewayCurrent) {
+            currentModel = localStorageModel;
+            console.log('使用 localStorage 用户选择:', currentModel);
+          } else if (gatewayCurrent) {
+            currentModel = gatewayCurrent;
+            console.log('使用 Gateway 当前模型:', currentModel);
+          } else {
+            currentModel = localStorageModel;
+            console.log('使用 localStorage 默认:', currentModel);
           }
           
-          console.log('当前模型:', currentModel);
+          console.log('当前模型:', currentModel, '(localStorage:', localStorageModel, ', Gateway:', gatewayCurrent, ')');
           
           // 构建菜单 HTML
           let html = '';

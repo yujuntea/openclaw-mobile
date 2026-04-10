@@ -1465,11 +1465,29 @@ class ProxyServer(http.server.SimpleHTTPRequestHandler):
                         'provider': provider_name
                     })
             
-            # 不返回 current，让前端完全依赖 localStorage
-            # 清理 localStorage 后，模型选择会重置为默认行为
-            self._send_json_response(200, {
-                'models': models
-            })
+            # 同时从 Gateway 获取当前实际使用的模型
+            current_model = None
+            try:
+                req = urllib.request.Request(
+                    GATEWAY_HTTP + '/api/model',
+                    method='GET'
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    resp_data = json.loads(resp.read().decode())
+                    current_model = resp_data.get('model')
+                    self.log_message("Gateway 当前模型: %s", current_model)
+            except Exception as ge:
+                self.log_message("获取 Gateway 当前模型失败: %s，fallback 到配置文件默认值", str(ge))
+                # fallback 到配置文件的默认模型
+                default_model = config.get('agents', {}).get('defaults', {}).get('model', {}).get('primary', '')
+                if default_model:
+                    current_model = default_model
+                    self.log_message("使用配置文件默认模型: %s", current_model)
+
+            resp_payload = {'models': models}
+            if current_model:
+                resp_payload['current'] = current_model
+            self._send_json_response(200, resp_payload)
         except Exception as e:
             self.log_message("读取模型列表失败：%s", str(e))
             # 失败时返回默认列表
