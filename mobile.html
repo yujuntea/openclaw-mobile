@@ -1044,9 +1044,14 @@
     // 获取认证头
     function getAuthHeaders() {
       const sessionToken = localStorage.getItem('oc_session_token');
+      const gatewayToken = localStorage.getItem('oc_gateway_token');
       const headers = {};
       if (sessionToken) {
         headers['Authorization'] = 'Bearer ' + sessionToken;
+      }
+      // 同时发送 Gateway Token，确保即使 Mobile Server 重启后也能认证
+      if (gatewayToken) {
+        headers['X-Gateway-Token'] = gatewayToken;
       }
       return headers;
     }
