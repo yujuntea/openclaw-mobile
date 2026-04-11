@@ -2611,32 +2611,32 @@
         return '<INLINECODE_' + idx + '>';
       });
       
-      // 3. 表格渲染
+      // 3. 表格渲染 (移动端适配：可横向滚动)
       html = html.replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:\|.+(?:\n|$))*)/gm, function(match, headerRow, bodyRows) {
         const headers = headerRow.split('|').map(h => h.trim()).filter(Boolean);
-        let tableHtml = '<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">';
+        let tableHtml = '<div style="overflow-x:auto;margin:12px -16px;padding:0 16px;"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px;">';
         // 表头
-        tableHtml += '<thead><tr>' + headers.map(h => '<th style="border:1px solid var(--bg4);padding:8px 12px;background:var(--bg3);text-align:left;white-space:nowrap;">' + h + '</th>').join('') + '</tr></thead>';
+        tableHtml += '<thead><tr>' + headers.map(h => '<th style="border:1px solid var(--bg4);padding:6px 8px;background:var(--bg3);text-align:left;white-space:normal;word-break:break-word;">' + h + '</th>').join('') + '</tr></thead>';
         // 表体
         tableHtml += '<tbody>';
         const rows = bodyRows.trim().split('\n');
         rows.forEach(row => {
           const cells = row.split('|').map(c => c.trim()).filter(Boolean);
           if (cells.length > 0) {
-            tableHtml += '<tr>' + cells.map(c => '<td style="border:1px solid var(--bg4);padding:8px 12px;">' + c + '</td>').join('') + '</tr>';
+            tableHtml += '<tr>' + cells.map(c => '<td style="border:1px solid var(--bg4);padding:6px 8px;white-space:normal;word-break:break-word;">' + c + '</td>').join('') + '</tr>';
           }
         });
-        tableHtml += '</tbody></table>';
+        tableHtml += '</tbody></table></div>';
         return tableHtml;
       });
       
-      // 4. 标题
-      html = html.replace(/^######\s+(.+)$/gm, '<h6 style="margin:8px 0 4px;font-size:13px;color:var(--text2);">$1</h6>');
-      html = html.replace(/^#####\s+(.+)$/gm, '<h5 style="margin:8px 0 4px;font-size:14px;">$1</h5>');
-      html = html.replace(/^####\s+(.+)$/gm, '<h4 style="margin:8px 0 4px;font-size:15px;">$1</h4>');
-      html = html.replace(/^###\s+(.+)$/gm, '<h3 style="margin:10px 0 6px;font-size:16px;font-weight:600;">$1</h3>');
-      html = html.replace(/^##\s+(.+)$/gm, '<h2 style="margin:12px 0 6px;font-size:17px;font-weight:600;border-bottom:1px solid var(--bg4);padding-bottom:4px;">$1</h2>');
-      html = html.replace(/^#\s+(.+)$/gm, '<h1 style="margin:14px 0 8px;font-size:20px;font-weight:700;border-bottom:1px solid var(--bg4);padding-bottom:6px;">$1</h1>');
+      // 4. 标题 (移动端优化：紧凑布局)
+      html = html.replace(/^######\s+(.+)$/gm, '<h6 style="margin:6px 0 3px;font-size:12px;color:var(--text2);font-weight:600;">$1</h6>');
+      html = html.replace(/^#####\s+(.+)$/gm, '<h5 style="margin:6px 0 3px;font-size:13px;font-weight:600;">$1</h5>');
+      html = html.replace(/^####\s+(.+)$/gm, '<h4 style="margin:7px 0 4px;font-size:14px;font-weight:600;">$1</h4>');
+      html = html.replace(/^###\s+(.+)$/gm, '<h3 style="margin:8px 0 4px;font-size:15px;font-weight:600;">$1</h3>');
+      html = html.replace(/^##\s+(.+)$/gm, '<h2 style="margin:10px 0 5px;font-size:16px;font-weight:600;border-bottom:1px solid var(--bg4);padding-bottom:3px;">$1</h2>');
+      html = html.replace(/^#\s+(.+)$/gm, '<h1 style="margin:12px 0 6px;font-size:18px;font-weight:700;border-bottom:1px solid var(--bg4);padding-bottom:4px;">$1</h1>');
       
       // 5. 分割线
       html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--bg4);margin:16px 0;">');
@@ -2645,10 +2645,10 @@
       html = html.replace(/^>\s+(.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:8px 0;background:var(--bg2);border-radius:0 8px 8px 0;color:var(--text2);">$1</blockquote>');
       
       // 7. 无序列表
-      html = html.replace(/^[ \t]*[-*]\s+(.+)$/gm, '<li style="margin-left:20px;list-style:disc;margin-bottom:4px;">$1</li>');
+      html = html.replace(/^[ \t]*[-*]\s+(.+)$/gm, '<li style="margin-left:16px;list-style:disc;margin-bottom:3px;padding-left:4px;">$1</li>');
       
       // 8. 有序列表
-      html = html.replace(/^[ \t]*\d+\.\s+(.+)$/gm, '<li style="margin-left:20px;list-style:decimal;margin-bottom:4px;">$1</li>');
+      html = html.replace(/^[ \t]*\d+\.\s+(.+)$/gm, '<li style="margin-left:16px;list-style:decimal;margin-bottom:3px;padding-left:4px;">$1</li>');
       
       // 9. 链接
       html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:var(--accent);text-decoration:underline;" target="_blank">$1</a>');
@@ -2664,11 +2664,11 @@
       
       // === 恢复受保护的内容 ===
       
-      // 恢复代码块
+      // 恢复代码块 (移动端适配)
       html = html.replace(/<CODEBLOCK_(\d+)>/g, function(m, idx) {
         const block = codeBlocks[parseInt(idx)];
-        const langLabel = block.lang ? '<span style="color:var(--text2);font-size:12px;">' + block.lang + '</span>' : '';
-        return '<div style="background:var(--bg3);border-radius:8px;padding:12px;margin:8px 0;overflow-x:auto;font-family:monospace;font-size:13px;line-height:1.5;"><div style="margin-bottom:6px;">' + langLabel + '</div><pre style="margin:0;white-space:pre-wrap;word-wrap:break-word;">' + block.code + '</pre></div>';
+        const langLabel = block.lang ? '<span style="color:var(--text2);font-size:11px;">' + block.lang + '</span>' : '';
+        return '<div style="background:var(--bg3);border-radius:6px;padding:10px;margin:6px -12px;overflow-x:auto;font-family:monospace;font-size:12px;line-height:1.4;"><div style="margin-bottom:4px;">' + langLabel + '</div><pre style="margin:0;white-space:pre-wrap;word-wrap:break-word;">' + block.code + '</pre></div>';
       });
       
       // 恢复行内代码
