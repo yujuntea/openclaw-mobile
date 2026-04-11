@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>小鱼 AI</title>
+  <title>小强 AI</title>
   <style>
     :root { --bg: #000; --bg2: #1c1c1e; --bg3: #2c2c2e; --bg4: #3a3a3c; --text: #fff; --text2: #8e8e93; --accent: #0a84ff; --green: #30d158; --orange: #ff9f0a; --red: #ff453a; --purple: #bf5af2; --safe-top: 47px; --input-height: 60px; }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -584,7 +584,7 @@
   
   <div class="login" id="login">
     <div class="login-emoji">🤖</div>
-    <div class="login-title" data-i18n="appName">小鱼 AI</div>
+    <div class="login-title" data-i18n="appName">小强 AI</div>
     <div class="login-sub" data-i18n="appDesc">AI 工作助手</div>
     <input type="text" class="login-input" id="wsUrlInput" data-i18n-placeholder="wsUrlPlaceholder" placeholder="WebSocket地址">
     <input type="text" class="login-input" id="urlInput" data-i18n-placeholder="proxyUrlPlaceholder" placeholder="代理地址">
@@ -604,7 +604,7 @@
   <div class="hidden" id="chat">
     <div class="header">
       <div class="header-left" id="sessionInfo"><span data-i18n="sessionLabel">会话</span>: main</div>
-      <div class="header-center" id="headerTitle">🐟 <span data-i18n="appName">小鱼 AI</span></div>
+      <div class="header-center" id="headerTitle">🤖 <span data-i18n="appName">小强 AI</span></div>
       <div class="header-right">
         <button class="header-btn" id="refreshBtn" onclick="refreshHistory()" data-i18n-title="refreshBtn" title="刷新消息">🔄</button>
         <button class="header-btn" id="ttsToggle" onclick="toggleAutoPlay()" title="自动朗读">🔊</button>
@@ -2591,24 +2591,102 @@
     
     function fmt(t) { 
       if (!t) return '';
-      let html = escapeHtml(t).replace(/\n/g,'<br>');
+      let html = escapeHtml(t);
+      
+      // === Markdown 渲染引擎 ===
+      
+      // 1. 代码块 (先处理，保护内容)
+      const codeBlocks = [];
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(m, lang, code) {
+        const idx = codeBlocks.length;
+        codeBlocks.push({lang, code});
+        return '<CODEBLOCK_' + idx + '>';
+      });
+      
+      // 2. 行内代码 (保护内容)
+      const inlineCodes = [];
+      html = html.replace(/`([^`]+)`/g, function(m, code) {
+        const idx = inlineCodes.length;
+        inlineCodes.push(code);
+        return '<INLINECODE_' + idx + '>';
+      });
+      
+      // 3. 表格渲染
+      html = html.replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:\|.+(?:\n|$))*)/gm, function(match, headerRow, bodyRows) {
+        const headers = headerRow.split('|').map(h => h.trim()).filter(Boolean);
+        let tableHtml = '<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">';
+        // 表头
+        tableHtml += '<thead><tr>' + headers.map(h => '<th style="border:1px solid var(--bg4);padding:8px 12px;background:var(--bg3);text-align:left;white-space:nowrap;">' + h + '</th>').join('') + '</tr></thead>';
+        // 表体
+        tableHtml += '<tbody>';
+        const rows = bodyRows.trim().split('\n');
+        rows.forEach(row => {
+          const cells = row.split('|').map(c => c.trim()).filter(Boolean);
+          if (cells.length > 0) {
+            tableHtml += '<tr>' + cells.map(c => '<td style="border:1px solid var(--bg4);padding:8px 12px;">' + c + '</td>').join('') + '</tr>';
+          }
+        });
+        tableHtml += '</tbody></table>';
+        return tableHtml;
+      });
+      
+      // 4. 标题
+      html = html.replace(/^######\s+(.+)$/gm, '<h6 style="margin:8px 0 4px;font-size:13px;color:var(--text2);">$1</h6>');
+      html = html.replace(/^#####\s+(.+)$/gm, '<h5 style="margin:8px 0 4px;font-size:14px;">$1</h5>');
+      html = html.replace(/^####\s+(.+)$/gm, '<h4 style="margin:8px 0 4px;font-size:15px;">$1</h4>');
+      html = html.replace(/^###\s+(.+)$/gm, '<h3 style="margin:10px 0 6px;font-size:16px;font-weight:600;">$1</h3>');
+      html = html.replace(/^##\s+(.+)$/gm, '<h2 style="margin:12px 0 6px;font-size:17px;font-weight:600;border-bottom:1px solid var(--bg4);padding-bottom:4px;">$1</h2>');
+      html = html.replace(/^#\s+(.+)$/gm, '<h1 style="margin:14px 0 8px;font-size:20px;font-weight:700;border-bottom:1px solid var(--bg4);padding-bottom:6px;">$1</h1>');
+      
+      // 5. 分割线
+      html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--bg4);margin:16px 0;">');
+      
+      // 6. 引用
+      html = html.replace(/^>\s+(.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:8px 0;background:var(--bg2);border-radius:0 8px 8px 0;color:var(--text2);">$1</blockquote>');
+      
+      // 7. 无序列表
+      html = html.replace(/^[ \t]*[-*]\s+(.+)$/gm, '<li style="margin-left:20px;list-style:disc;margin-bottom:4px;">$1</li>');
+      
+      // 8. 有序列表
+      html = html.replace(/^[ \t]*\d+\.\s+(.+)$/gm, '<li style="margin-left:20px;list-style:decimal;margin-bottom:4px;">$1</li>');
+      
+      // 9. 链接
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:var(--accent);text-decoration:underline;" target="_blank">$1</a>');
+      
+      // 10. 加粗 + 斜体
+      html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/g, '<em>$1</em>');
+      
+      // 11. 换行 (段落)
+      html = html.replace(/\n\n/g, '<br><br>');
+      html = html.replace(/\n/g, '<br>');
+      
+      // === 恢复受保护的内容 ===
+      
+      // 恢复代码块
+      html = html.replace(/<CODEBLOCK_(\d+)>/g, function(m, idx) {
+        const block = codeBlocks[parseInt(idx)];
+        const langLabel = block.lang ? '<span style="color:var(--text2);font-size:12px;">' + block.lang + '</span>' : '';
+        return '<div style="background:var(--bg3);border-radius:8px;padding:12px;margin:8px 0;overflow-x:auto;font-family:monospace;font-size:13px;line-height:1.5;"><div style="margin-bottom:6px;">' + langLabel + '</div><pre style="margin:0;white-space:pre-wrap;word-wrap:break-word;">' + block.code + '</pre></div>';
+      });
+      
+      // 恢复行内代码
+      html = html.replace(/<INLINECODE_(\d+)>/g, function(m, idx) {
+        return '<code style="background:var(--bg3);padding:2px 6px;border-radius:4px;font-family:monospace;font-size:13px;">' + inlineCodes[parseInt(idx)] + '</code>';
+      });
       
       // 处理 MEDIA: 路径，转换为可访问的图片 URL
-      // MEDIA:/root/.openclaw/media/browser/xxx.jpg -> /media/browser/xxx.jpg (通过 8080 端口服务器)
       html = html.replace(/MEDIA:([^\s<]+)/g, function(match, path) {
-        // 提取相对路径部分
-        // /root/.openclaw/media/browser/xxx.jpg -> browser/xxx.jpg
         const mediaMatch = path.match(/\/root\/\.openclaw\/media\/(.+)$/);
         if (mediaMatch) {
           const relativePath = mediaMatch[1];
-          // 通过 8080 端口的 /media/ 路径访问
           return '<img src="/media/' + relativePath + '" style="max-width:100%;max-height:300px;border-radius:12px;margin:8px 0;cursor:pointer;" onclick="showFullImage(this.src)" alt="图片" loading="lazy">';
         }
-        // 如果路径已经是相对路径
         if (!path.startsWith('/') && !path.startsWith('http')) {
           return '<img src="/media/' + path + '" style="max-width:100%;max-height:300px;border-radius:12px;margin:8px 0;cursor:pointer;" onclick="showFullImage(this.src)" alt="图片" loading="lazy">';
         }
-        return match; // 保持原样
+        return match;
       });
       
       return html;
