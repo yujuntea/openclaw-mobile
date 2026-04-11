@@ -68,8 +68,8 @@
     .av { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; background: linear-gradient(135deg, #5856d6, #af52de); }
     .msg.user .av { background: var(--accent); }
     
-    .msg-content { flex: 1; min-width: 0; overflow: visible; }
-    .bubble { padding: 10px 14px 10px 18px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-break: break-word; overflow-wrap: anywhere; white-space: normal; position: relative; max-width: 100%; width: 100%; box-sizing: border-box; margin-right: 12px; }
+    .msg-content { flex: 1; min-width: 0; overflow: visible; max-width: calc(100% - 8px); }
+    .bubble { padding: 10px 14px 10px 18px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-break: break-word; overflow-wrap: anywhere; white-space: pre-line; position: relative; max-width: 100%; box-sizing: border-box; }
     .msg.ai .bubble { background: var(--bg3); border-top-left-radius: 6px; }
     .msg.user .bubble { background: var(--accent); border-top-right-radius: 6px; }
     .tts-btn { background: var(--bg4); border: none; border-radius: 12px; padding: 6px 12px; color: var(--accent); cursor: pointer; font-size: 13px; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
