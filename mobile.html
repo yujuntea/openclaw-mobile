@@ -58,27 +58,18 @@
     }
     .lang-btn:active { transform: scale(0.9); background: var(--bg4); }
     
-    .chat { position: absolute; top: var(--safe-top); bottom: 0; left: 0; right: 0; overflow-y: auto; overflow-x: clip; padding: 12px; padding-bottom: calc(var(--input-height) + 30px); -webkit-overflow-scrolling: touch; }
+    .chat { position: absolute; top: var(--safe-top); bottom: 0; left: 0; right: 0; overflow-y: auto; overflow-x: hidden; padding: 12px; padding-bottom: calc(var(--input-height) + 30px); -webkit-overflow-scrolling: touch; }
     
-    /* 表格横向滚动容器 */
-    .table-scroll { overflow-x: auto; margin: 8px -14px; padding: 0 14px; -webkit-overflow-scrolling: touch; position: relative; }
-    .table-scroll table { width: 100%; min-width: 500px; border-collapse: collapse; font-size: 13px; }
-    .table-scroll th, .table-scroll td { border: 1px solid var(--bg4); padding: 6px 10px; text-align: left; white-space: nowrap; }
-    .table-scroll th { background: var(--bg3); font-weight: 600; }
-    .table-scroll td { word-break: break-word; }
-    /* 滚动提示 */
-    .table-scroll::after { content: '← 左右滑动查看 →'; display: block; text-align: center; font-size: 11px; color: var(--text2); padding: 4px 0; margin-top: 2px; } 
-    
-    .msg { display: flex; gap: 8px; margin-bottom: 12px; max-width: 90%; animation: in .25s ease-out; flex-shrink: 0; }
     @keyframes in { from { opacity: 0; transform: translateY(8px); } }
+    .msg { display: flex; gap: 8px; margin-bottom: 12px; max-width: 100%; animation: in .25s ease-out; flex-shrink: 0; }
     .msg.user { margin-left: auto; flex-direction: row-reverse; }
     .msg.ai { flex-direction: row; }
     
     .av { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; background: linear-gradient(135deg, #5856d6, #af52de); }
     .msg.user .av { background: var(--accent); }
     
-    .msg-content { flex: 1; min-width: 0; }
-    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; position: relative; }
+    .msg-content { flex: 1; min-width: 0; max-width: calc(100% - 36px); overflow: hidden; }
+    .bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; position: relative; max-width: 100%; }
     .msg.ai .bubble { background: var(--bg3); border-top-left-radius: 6px; }
     .msg.user .bubble { background: var(--accent); border-top-right-radius: 6px; }
     .tts-btn { background: var(--bg4); border: none; border-radius: 12px; padding: 6px 12px; color: var(--accent); cursor: pointer; font-size: 13px; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
@@ -2623,15 +2614,16 @@
       // 3. 表格渲染 (移动端适配：可横向滚动)
       html = html.replace(/^\|(.+)\|\s*\n\|[-| :]+\|\s*\n((?:\|.+(?:\n|$))*)/gm, function(match, headerRow, bodyRows) {
         const headers = headerRow.split('|').map(h => h.trim()).filter(Boolean);
-        const tblId = 'tbl_' + Math.random().toString(36).substr(2, 6);
-        let tableHtml = '<div class="table-scroll" id="' + tblId + '"><table><thead><tr>';
-        tableHtml += headers.map(h => '<th>' + h + '</th>').join('');
-        tableHtml += '</tr></thead><tbody>';
+        let tableHtml = '<div style="overflow-x:auto;margin:8px -14px;padding:0 14px;-webkit-overflow-scrolling:touch;"><table style="width:auto;min-width:100%;border-collapse:collapse;font-size:13px;">';
+        // 表头
+        tableHtml += '<thead><tr>' + headers.map(h => '<th style="border:1px solid var(--bg4);padding:6px 10px;background:var(--bg3);text-align:left;white-space:nowrap;font-weight:600;">' + h + '</th>').join('') + '</tr></thead>';
+        // 表体
+        tableHtml += '<tbody>';
         const rows = bodyRows.trim().split('\n');
         rows.forEach(row => {
           const cells = row.split('|').map(c => c.trim()).filter(Boolean);
           if (cells.length > 0) {
-            tableHtml += '<tr>' + cells.map(c => '<td>' + c + '</td>').join('') + '</tr>';
+            tableHtml += '<tr>' + cells.map(c => '<td style="border:1px solid var(--bg4);padding:6px 10px;white-space:nowrap;word-break:break-all;">' + c + '</td>').join('') + '</tr>';
           }
         });
         tableHtml += '</tbody></table></div>';
