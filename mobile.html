@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="build" content="20260412-0005">
+  <meta name="build" content="20260412-0007">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
     :root { --bg: #000; --bg2: #1c1c1e; --bg3: #2c2c2e; --bg4: #3a3a3c; --text: #fff; --text2: #8e8e93; --accent: #0a84ff; --green: #30d158; --orange: #ff9f0a; --red: #ff453a; --purple: #bf5af2; --safe-top: 47px; --input-height: 60px; }
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html,body { height: 100%; overflow: hidden; }
-    body { font-family: -apple-system, SF Pro Text, sans-serif; background: var(--bg); color: var(--text); }
+    body { font-family: -apple-system, "Apple Color Emoji", SF Pro Text, "Segoe UI Emoji", "Noto Color Emoji", sans-serif; background: var(--bg); color: var(--text); -webkit-text-fill-color: initial; }
     
     .header { height: var(--safe-top); background: rgba(28,28,30,.95); backdrop-filter: blur(20px); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: .5px solid rgba(255,255,255,.1); position: relative; }
     .header-left { font-size: 11px; color: var(--text2); max-width: 35%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
@@ -70,7 +70,11 @@
     .msg.user .av { background: var(--accent); }
     
     .msg-content { flex: 1; min-width: 0; overflow: visible; max-width: calc(100% - 8px); }
-    .bubble { padding: 10px 14px 10px 18px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-break: break-word; overflow-wrap: anywhere; white-space: pre-line; position: relative; max-width: 100%; box-sizing: border-box; }
+    .bubble { padding: 10px 14px 10px 18px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-break: break-word; overflow-wrap: anywhere; white-space: pre-line; position: relative; max-width: 100%; box-sizing: border-box; overflow-x: hidden; }
+    .bubble * { max-width: 100%; box-sizing: border-box; }
+    .bubble li { overflow-wrap: break-word; -webkit-text-fill-color: initial; }
+    .bubble pre { white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
+    .bubble code { overflow-wrap: break-word; word-break: break-all; }
     .msg.ai .bubble { background: var(--bg3); border-top-left-radius: 6px; }
     .msg.user .bubble { background: var(--accent); border-top-right-radius: 6px; }
     .tts-btn { background: var(--bg4); border: none; border-radius: 12px; padding: 6px 12px; color: var(--accent); cursor: pointer; font-size: 13px; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; }
@@ -2651,10 +2655,17 @@
       html = html.replace(/^>\s+(.+)$/gm, '<blockquote style="border-left:3px solid var(--accent);padding:8px 12px;margin:8px 0;background:var(--bg2);border-radius:0 8px 8px 0;color:var(--text2);">$1</blockquote>');
       
       // 7. 无序列表
-      html = html.replace(/^[ \t]*[-*]\s+(.+)$/gm, '<li style="margin-left:16px;list-style:disc;margin-bottom:3px;padding-left:4px;">$1</li>');
+      html = html.replace(/^[ \t]*[-*]\s+(.+)$/gm, '<li style="margin-left:16px;margin-bottom:3px;padding-left:4px;list-style:disc;">$1</li>');
       
       // 8. 有序列表
-      html = html.replace(/^[ \t]*\d+\.\s+(.+)$/gm, '<li style="margin-left:16px;list-style:decimal;margin-bottom:3px;padding-left:4px;">$1</li>');
+      html = html.replace(/^[ \t]*\d+\.\s+(.+)$/gm, function(m, content) {
+        return '<li style="margin-left:16px;margin-bottom:3px;padding-left:4px;list-style:decimal;">' + content + '</li>';
+      });
+      
+      // 8.5 将连续的 <li> 包裹在 <ul> 中
+      html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*(?:<br>)?)+)/g, function(match) {
+        return '<ul style="margin:4px 0;padding-left:4px;">' + match.replace(/<br>\s*/g, '') + '</ul>';
+      });
       
       // 9. 链接
       html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:var(--accent);text-decoration:underline;" target="_blank">$1</a>');
@@ -3411,4 +3422,4 @@
 </body>
 </html>
 <!-- Updated: 2026-04-11 00:55:00 CST -->
-<!-- Version: 2026-04-11-0055-localstorage-priority -->
+<!-- Version: 2026-04-12-0007-restore-bullets -->
